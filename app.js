@@ -526,13 +526,27 @@ function drawMotionPath(p){
   const col=p.color || (pc&&pc.color) || '#2E8FA8';
   const seld = selContains('path',p.id);
   const scr=p.pts.map(q=>W2S(q.x,q.y));
+
+  if(p.isPass){
+    // puck pass: dashed line with arrowhead
+    ctx.save(); ctx.lineJoin='round'; ctx.lineCap='round';
+    ctx.globalAlpha=seld?0.9:0.75;
+    ctx.setLineDash([Math.max(7,2.2*cam.s),Math.max(5,1.6*cam.s)]);
+    ctx.lineWidth=Math.max(2.5,0.7*cam.s); ctx.strokeStyle=col;
+    strokePoly(scr); ctx.setLineDash([]);
+    arrowHead(scr,col); ctx.restore();
+    if(pc){ ctx.save(); ctx.globalAlpha=0.45; drawPieceGhost(pc,p.pts[p.pts.length-1]); ctx.restore(); }
+    if(seld && p.anchors){ p.anchors.forEach(aa=>{ const [hx,hy]=W2S(aa.x,aa.y);
+      ctx.fillStyle='#fff'; ctx.strokeStyle=col; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(hx,hy,Math.max(5,1.2*cam.s),0,7); ctx.fill(); ctx.stroke(); }); }
+    return;
+  }
+
   ctx.save(); ctx.lineJoin='round'; ctx.lineCap='round';
-  // travel lane (shows the RANGE the piece moves through)
+  // travel lane
   const laneW=Math.max(9,(pc?pieceRadius(pc)*1.9:5)*cam.s);
   ctx.strokeStyle=col; ctx.globalAlpha=seld?0.22:0.14; ctx.lineWidth=laneW; strokePoly(scr);
-  // dashed centre guide
-  ctx.globalAlpha=1; ctx.setLineDash([Math.max(7,2.2*cam.s),Math.max(5,1.6*cam.s)]);
-  ctx.lineWidth=Math.max(2,0.5*cam.s); ctx.strokeStyle=col; strokePoly(scr); ctx.setLineDash([]);
+  // solid centre line (smooth curve)
+  ctx.globalAlpha=1; ctx.lineWidth=Math.max(2.5,0.65*cam.s); ctx.strokeStyle=col; strokePoly(scr);
   arrowHead(scr,col); ctx.restore();
   // ghost piece at destination
   if(pc){ ctx.save(); ctx.globalAlpha=0.42; drawPieceGhost(pc,p.pts[p.pts.length-1]); ctx.restore(); }
@@ -822,6 +836,49 @@ cv.addEventListener('pointerdown',e=>{
         else { const np={id:id(),motion:true,owner:pc.id,color:(pc.color||activeColor||'#2E8FA8'),
           anchors:[{x:pc.x,y:pc.y}],pts:[{x:pc.x,y:pc.y}],delay:0,dur:T,_lut:null};
           paths.push(np); building={path:np}; selOne('path',np.id); } }
+    }
+    const la=building.path.anchors[building.path.anchors.length-1];
+    seg={raw:[{x:la.x,y:la.y}]};
+    updateInspector(); render(); return;
+  }
+  if(tool==='skate'){
+    if(!building){
+      pushUndo();
+      const ep=motionEndpointAt(wx,wy);
+      if(ep){ building={path:ep}; selOne('path',ep.id); }
+      else {
+        const pc=pieceAt(wx,wy)||nearestPiece(wx,wy,4);
+        if(!pc){ toast('Click a skater to start their path'); return; }
+        const existing=motionPathOf(pc.id);
+        if(existing){ building={path:existing}; selOne('path',existing.id); toast('Extending route — click to add points, double-click to finish'); }
+        else {
+          const np={id:id(),motion:true,owner:pc.id,color:(pc.color||'#0C2233'),
+            anchors:[{x:pc.x,y:pc.y}],pts:[{x:pc.x,y:pc.y}],delay:0,dur:T,_lut:null};
+          paths.push(np); building={path:np}; selOne('path',np.id);
+          toast('Click to add waypoints — double-click or Enter to finish');
+        }
+      }
+    }
+    const la=building.path.anchors[building.path.anchors.length-1];
+    seg={raw:[{x:la.x,y:la.y}]};
+    updateInspector(); render(); return;
+  }
+  if(tool==='pass'){
+    if(!building){
+      pushUndo();
+      const pc=pieceAt(wx,wy)||nearestPiece(wx,wy,6);
+      let puck=pieces.find(p=>p.type==='puck'&&Math.hypot(p.x-(pc?pc.x:wx),p.y-(pc?pc.y:wy))<10);
+      if(!puck) puck=pieces.find(p=>p.type==='puck');
+      if(!puck){
+        puck={id:id(),type:'puck',x:pc?pc.x:wx,y:pc?pc.y:wy,size:1,rot:0};
+        pieces.push(puck);
+      }
+      puck.x=pc?pc.x:wx; puck.y=pc?pc.y:wy; puck.legs=[];
+      paths=paths.filter(p=>p.owner!==puck.id);
+      const np={id:id(),motion:true,owner:puck.id,color:'#0C2233',
+        anchors:[{x:puck.x,y:puck.y}],pts:[{x:puck.x,y:puck.y}],delay:0,dur:T,_lut:null,isPass:true};
+      paths.push(np); building={path:np}; selOne('path',np.id);
+      toast('Click to route the puck — double-click or Enter to finish');
     }
     const la=building.path.anchors[building.path.anchors.length-1];
     seg={raw:[{x:la.x,y:la.y}]};
@@ -1130,9 +1187,9 @@ function updateHint(){
   if(pendingType){ h.textContent=(pendingStamp?'Click to stamp ':'Click to place ')+prettyType(pendingType)+(pendingStamp?'  (Esc to stop)':'  (Esc to cancel)'); h.style.display='block'; return; }
   if(pieces.length===0){ h.textContent='Click a skater on the left to drop it on the ice — then draw a path from it and press Play.'; h.style.display='block'; return; }
   const tips={ select:'Drag pieces • drag a selected lane\'s dots to reshape • Delete to remove',
-    motion:'From a piece: drag to curve, or click to add turns (S/U/zig-zag). Click the end of a route to extend it. Double-click or Enter to finish.',
-    skate:'Draw a skating route (diagram only, does not move)',
-    pass:'Draw from the puck to its target', shot:'Draw a shot from the puck',
+    motion:'From a piece: drag to curve, or click to add turns. Click the end of a route to extend it. Double-click or Enter to finish.',
+    skate:'Click a skater, then click waypoints to build their skating path. Double-click or Enter to finish — they\'ll move on Play.',
+    pass:'Click near the puck carrier, then click points for the puck to travel. Double-click or Enter to finish.', shot:'Draw a shot from the puck',
     arrow:'Draw a straight arrow (diagram only)', pen:'Freehand draw (diagram only)',
     text:'Click anywhere, on or off the ice, to drop a label; double-click a label to edit',
     pan:'Drag to move the view', erase:'Click a piece or path to delete it' };
