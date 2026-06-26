@@ -1,0 +1,153 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rink Lab — Drill Animator</title>
+<link rel="stylesheet" href="style.css">
+
+
+<div class="app">
+  <!-- TOP -->
+  <div class="top">
+    <div class="brand"><span class="mark">▷</span><div>RINK&nbsp;LAB<small>DRILL ANIMATOR</small></div></div>
+
+    <span class="lbl">View</span>
+    <div class="seg" id="viewSeg"></div>
+
+    <span class="lbl">Rinks</span>
+    <select id="rinkSel" class="tbtn" style="padding:6px 8px;-webkit-appearance:menulist">
+      <option value="full">Full sheet</option>
+      <option value="half">Half sheet</option>
+      <option value="halves">Two half sheets</option>
+      <option value="twofull">Two full sheets</option>
+    </select>
+    <label class="tchk" style="color:var(--muted);font-weight:600"><input type="checkbox" id="trapChk" checked> Trapezoid</label>
+
+    <span class="lbl">Centre</span>
+    <select id="logoSel" class="tbtn" style="padding:6px 8px;-webkit-appearance:menulist">
+      <option value="none">No logo</option>
+      <option value="anchorage" selected>Anchorage Academy</option>
+      <option value="krakenS">Seattle Kraken</option>
+      <option value="youthS">Kraken (mono)</option>
+      <option value="anchorLight">Anchor (ice)</option>
+      <option value="anchorNavy">Anchor (navy)</option>
+      <option value="upload">Upload…</option>
+    </select>
+
+    <div class="spacer"></div>
+    <select id="refSel" class="tbtn" style="padding:6px 8px;-webkit-appearance:menulist" title="Drop a drill diagram on the ice to trace and animate over">
+      <option value="">Reference…</option>
+      <option value="stations">10U Stealth (stations)</option>
+      <option value="swing">Figure-8 swing</option>
+      <option value="flow">Flow / regroup</option>
+      <option value="cones">Cone weave</option>
+      <option value="uploadref">Upload…</option>
+    </select>
+    <button class="tbtn ghost" id="demoBtn" title="Load the 2v1 breakout example">▶ Demo&nbsp;drill</button>
+    <button class="tbtn ghost" id="imgBtn" title="Insert a logo or photo for a client">＋ Image</button>
+    <button class="tbtn ghost" id="exportBtn">Save</button>
+    <button class="tbtn ghost" id="importBtn">Open</button>
+    <button class="tbtn ghost" id="clearBtn">Clear</button>
+    <button class="tbtn" id="helpBtn">?</button>
+    <input type="file" id="imgFile" accept="image/*" hidden>
+    <input type="file" id="jsonFile" accept="application/json,.json" hidden>
+    <input type="file" id="logoFile" accept="image/*" hidden>
+    <input type="file" id="refFile" accept="image/*" hidden>
+  </div>
+
+  <div class="body">
+    <!-- TRAY -->
+    <div class="tray">
+      <h4>Tools</h4>
+      <div class="toolgrid" id="tools"></div>
+
+      <h4>Colour · objects &amp; lines</h4>
+      <div class="swatchrow" id="objcolors"></div>
+
+      <h4>Player colour</h4>
+      <div class="swatchrow" id="swatches"></div>
+
+      <h4>Skaters</h4>
+      <div class="pieces" id="skaters"></div>
+
+      <h4>Positions</h4>
+      <div class="pieces" id="positions"></div>
+
+      <h4>Equipment</h4>
+      <div class="pieces" id="equip"></div>
+    </div>
+
+    <!-- STAGE -->
+    <div class="stage">
+      <canvas id="cv"></canvas>
+      <div class="hint" id="hint"></div>
+      <div class="zoomctl">
+        <button id="zin" title="Zoom in">＋</button>
+        <button id="zout" title="Zoom out">－</button>
+        <button id="zfit" title="Fit view" style="font-size:12px">FIT</button>
+      </div>
+
+      <!-- INSPECTOR -->
+      <div class="inspect" id="inspect">
+        <div class="title"><span id="inspTitle">Selection</span><button id="inspClose">×</button></div>
+        <div id="inspBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRANSPORT -->
+  <div class="transport">
+    <button class="play" id="playBtn" title="Play / pause (Space)">▶</button>
+    <div class="scrub">
+      <input type="range" id="scrubber" min="0" max="1000" value="0">
+      <span class="time" id="timeLbl">0.0s / 5.0s</span>
+    </div>
+    <button class="tbtn" id="staggerBtn" title="Space out start times so pieces move one after another">⇥ Stagger</button>
+    <label class="tchk"><input type="checkbox" id="loopChk"> Loop</label>
+    <label class="tchk">Speed
+      <input type="range" id="speed" min="2" max="12" step="0.5" value="5" style="width:90px">
+    </label>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- HELP -->
+<div class="modal" id="modal">
+  <div class="card">
+    <h2>Rink Lab — quick start</h2>
+    <p>A whiteboard that <b>moves</b>. Drop pieces on the ice, draw where they travel, press play.</p>
+
+    <h3>Make a piece move</h3>
+    <ol>
+      <li>Click a <b>skater</b> (or any piece) in the tray, then click the ice to place it.</li>
+      <li>Pick the <b>Move</b> tool and <b>drag from that piece</b> to draw where it travels. You'll see a shaded <b>lane</b> showing the range, with a faded ghost of the piece at the destination.</li>
+      <li>Press <b>Play</b>. The piece glides along the lane. Give several pieces lanes and they move together.</li>
+      <li>Reshape any lane: <b>Select</b> it and drag the dots. Move the piece and its lane follows.</li>
+      <li>Want a rush that unfolds in order? Hit <b>⇥ Stagger</b>, or select a lane and set its <b>Start delay</b> and <b>Travel time</b>.</li>
+    </ol>
+    <p class="mini">The <b>Skate</b>, <b>Pass</b>, <b>Shot</b>, <b>Arrow</b> and <b>Pen</b> tools draw diagram lines only — they never move anything. Use <b>Move</b> for animation.</p>
+
+    <h3>Carry &amp; pass a puck</h3>
+    <ol>
+      <li>Give your players their <b>Move</b> routes first.</li>
+      <li>Select a <b>puck</b>. In its panel, <b>Set carrier</b> and click the player who starts with it.</li>
+      <li><b>Add pass</b> and click the receiver. The puck rides the carrier, then passes to where the receiver <i>will be</i> (a lead pass), then rides them. Chain more passes for give-and-go, D-to-D, breakouts.</li>
+      <li>Adjust each pass's timing with its slider so it lands on the tape.</li>
+    </ol>
+
+    <h3>Build the picture</h3>
+    <ol>
+      <li><b>Equipment</b> tray: nets, pucks, cones, tires, bumpers, dots, goalie, coach.</li>
+      <li><b>View</b> isolates a zone (D-zone / neutral / O-zone). <b>2 rinks</b> runs split-ice stations.</li>
+      <li><b>＋ Image</b> drops in a client logo or photo; drag and resize it like any piece.</li>
+      <li><b>Select</b> tool: click to pick one, <b>drag a box</b> over empty ice to select many, <b>Shift-click</b> to add or remove. Then drag any to move them together, recolour, <kbd>⌘/Ctrl D</kbd> to duplicate, or <kbd>Delete</kbd> to remove the whole group.</li>
+    </ol>
+
+    <h3>Keep your work</h3>
+    <p><b>Save</b> downloads the drill as a file; <b>Open</b> loads it back. <kbd>Space</kbd> play, <kbd>Esc</kbd> deselect, <kbd>Ctrl/⌘ Z</kbd> undo.</p>
+
+    <div class="closerow"><button class="tbtn" id="helpClose">Got it</button></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
