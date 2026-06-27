@@ -682,8 +682,8 @@ function drawScallops(ctx, pts, col, camScale){
   function normAt(s){ const a=getAt(Math.max(0,s-1)), b=getAt(Math.min(total,s+1));
     const dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy)||1; return [-dy/len,dx/len]; }
 
-  const amp=Math.max(4,2.8*camScale);   // height of each C (perpendicular)
-  const wl=amp*1.6;                     // width of each C (along path) — tight for C-shape look
+  const amp=Math.max(2.5,1.5*camScale); // height of each C (perpendicular)
+  const wl=amp*1.4;                     // width of each C (along path)
 
   ctx.save(); ctx.strokeStyle=col; ctx.lineWidth=Math.max(2,0.55*camScale);
   ctx.lineJoin='round'; ctx.lineCap='round';
