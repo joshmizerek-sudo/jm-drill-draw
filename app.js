@@ -629,26 +629,30 @@ function arrowHead(scr,col,open){
   ctx.lineTo(b[0]-L*Math.cos(ang+0.42),b[1]-L*Math.sin(ang+0.42)); ctx.closePath(); ctx.fill();
 }
 function shotDouble(scr,col){
-  // Two parallel lines with a filled triangle tip
+  const n=scr.length;
+  const a=scr[n-2]||scr[0], b=scr[n-1];
+  const ang=Math.atan2(b[1]-a[1],b[0]-a[0]);
+  const L=Math.max(10,3.0*cam.s);  // triangle length
   const gap=Math.max(3,0.9*cam.s);
   const lw=Math.max(1.5,0.45*cam.s);
-  ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=lw;
+  // stop lines short of the tip so triangle caps them cleanly
+  const tipX=b[0]-L*Math.cos(ang), tipY=b[1]-L*Math.sin(ang);
+  const trimmed=[...scr.slice(0,-1),[tipX,tipY]];
+  ctx.strokeStyle=col; ctx.lineWidth=lw;
   for(let side=-1;side<=1;side+=2){
     const offset=gap*side;
     ctx.beginPath();
-    for(let i=0;i<scr.length;i++){
-      const a=i>0?scr[i-1]:scr[i], b=scr[i];
-      const ang=Math.atan2(b[1]-a[1],b[0]-a[0]);
-      const nx=-Math.sin(ang)*offset, ny=Math.cos(ang)*offset;
-      if(i===0) ctx.moveTo(scr[i][0]+nx,scr[i][1]+ny);
-      else ctx.lineTo(scr[i][0]+nx,scr[i][1]+ny);
+    for(let i=0;i<trimmed.length;i++){
+      const prev=i>0?trimmed[i-1]:trimmed[i], cur=trimmed[i];
+      const a2=Math.atan2(cur[1]-prev[1],cur[0]-prev[0]);
+      const nx=-Math.sin(a2)*offset, ny=Math.cos(a2)*offset;
+      if(i===0) ctx.moveTo(cur[0]+nx,cur[1]+ny);
+      else ctx.lineTo(cur[0]+nx,cur[1]+ny);
     }
     ctx.stroke();
   }
-  // filled triangle tip
-  const n=scr.length; const a=scr[n-2]||scr[0], b=scr[n-1];
-  const ang=Math.atan2(b[1]-a[1],b[0]-a[0]);
-  const L=Math.max(10,3.0*cam.s);
+  // filled triangle at the tip
+  ctx.fillStyle=col;
   ctx.beginPath();
   ctx.moveTo(b[0],b[1]);
   ctx.lineTo(b[0]-L*Math.cos(ang-0.38),b[1]-L*Math.sin(ang-0.38));
