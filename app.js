@@ -93,6 +93,8 @@ let activeColor=null;   // null = each object's own default; otherwise applies t
 let clip=null;          // copied piece/path
 let pendingStamp=false; // keep placing copies until Esc
 let playerColor='blue';
+let passBuilding=null;  // {path} click-based pass being built
+let passCursor=null;    // current mouse pos for live pass preview
 let sel=null;            // primary {kind:'piece'|'path', id}
 let selSet=[];           // full selection (one or many)
 let marquee=null;        // rubber-band box
@@ -735,6 +737,15 @@ function render(){
     ctx.save(); ctx.strokeStyle='#5BC2D6'; ctx.fillStyle='rgba(91,194,214,.12)'; ctx.lineWidth=1.5; ctx.setLineDash([6,4]);
     const rx=Math.min(a[0],b[0]),ry=Math.min(a[1],b[1]),rw=Math.abs(b[0]-a[0]),rh=Math.abs(b[1]-a[1]);
     ctx.fillRect(rx,ry,rw,rh); ctx.strokeRect(rx,ry,rw,rh); ctx.restore(); }
+  // live preview of pass being built
+  if(passBuilding && passCursor){
+    const pts=passBuilding.path.pts; const last=pts[pts.length-1];
+    const a=W2S(last.x,last.y), b=W2S(passCursor.x,passCursor.y);
+    ctx.save(); ctx.strokeStyle='#0C2233'; ctx.globalAlpha=0.45;
+    ctx.lineWidth=Math.max(2,0.55*cam.s); ctx.setLineDash([7,6]);
+    ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
+    ctx.setLineDash([]); ctx.restore();
+  }
   updateHint();
 }
 
@@ -827,6 +838,17 @@ cv.addEventListener('pointerdown',e=>{
     seg={raw:[{x:la.x,y:la.y}]};
     updateInspector(); render(); return;
   }
+  if(tool==='pass'){
+    if(!passBuilding){
+      pushUndo();
+      const np={id:id(),type:'pass',color:(activeColor||'#0C2233'),pts:[{x:wx,y:wy}],owner:null,delay:0,dur:T,_lut:null};
+      paths.push(np); passBuilding={path:np}; selOne('path',np.id);
+      toast('Click to add bend points — double-click or Enter to finish');
+    } else {
+      passBuilding.path.pts.push({x:wx,y:wy});
+    }
+    passCursor={x:wx,y:wy}; updateInspector(); render(); return;
+  }
   if(tool==='erase'){
     const pc=pieceAt(wx,wy); if(pc){ pushUndo(); pieces=pieces.filter(p=>p!==pc); paths=paths.filter(p=>p.owner!==pc.id); selOne(null); updateInspector(); render(); return; }
     const pa=pathAt(wx,wy); if(pa){ pushUndo(); paths=paths.filter(p=>p!==pa); selOne(null); updateInspector(); render(); }
@@ -844,6 +866,7 @@ cv.addEventListener('pointerdown',e=>{
 });
 cv.addEventListener('pointermove',e=>{
   const [wx,wy]=S2W(e.offsetX,e.offsetY);
+  if(passBuilding){ passCursor={x:wx,y:wy}; render(); return; }
   if(panStart){ cam.tx=panStart.tx+(e.offsetX-panStart.x); cam.ty=panStart.ty+(e.offsetY-panStart.y); render(); return; }
   if(marquee){ marquee.x1=wx; marquee.y1=wy; render(); return; }
   if(drag && drag.group){ const dx=wx-drag.lastx, dy=wy-drag.lasty; drag.lastx=wx; drag.lasty=wy;
@@ -888,6 +911,12 @@ cv.addEventListener('pointerup',e=>{
 });
 cv.addEventListener('dblclick',e=>{
   if(building){ finishBuilding(); return; }
+  if(passBuilding){
+    // dblclick fires two clicks first — remove the duplicate last point
+    const pts=passBuilding.path.pts;
+    if(pts.length>1) pts.pop();
+    passBuilding=null; passCursor=null; selOne(null); updateInspector(); render(); return;
+  }
   const [wx,wy]=S2W(e.offsetX,e.offsetY); const pc=pieceAt(wx,wy);
   if(pc && pc.type==='text'){ const s=window.prompt('Edit text:', pc.text||''); if(s!==null){ pushUndo(); pc.text=s.trim(); render(); } }
 });
@@ -1110,6 +1139,7 @@ document.getElementById('scrubber').oninput=e=>{ playing=false; setPlayUI(); tNo
 window.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT')return;
   if(building && (e.key==='Enter'||e.key==='Escape')){ e.preventDefault(); finishBuilding(); return; }
+  if(passBuilding && (e.key==='Enter'||e.key==='Escape')){ e.preventDefault(); passBuilding=null; passCursor=null; selOne(null); updateInspector(); render(); return; }
   if(e.code==='Space'){ e.preventDefault(); togglePlay(); }
   else if(e.key==='Escape'){ pendingType=null; pendingOpts=null; pendingStamp=false; pendingPick=null; cv.style.cursor=''; selOne(null); updateInspector(); render(); updateHint(); document.getElementById('modal').classList.remove('show'); }
   else if((e.key==='Delete'||e.key==='Backspace') && selSet.length){ e.preventDefault(); deleteSelection(); }
@@ -1132,7 +1162,7 @@ function updateHint(){
   const tips={ select:'Drag pieces • drag a selected lane\'s dots to reshape • Delete to remove',
     motion:'From a piece: drag to curve, or click to add turns (S/U/zig-zag). Click the end of a route to extend it. Double-click or Enter to finish.',
     skate:'Draw a skating route (diagram only, does not move)',
-    pass:'Draw from the puck to its target', shot:'Draw a shot from the puck',
+    pass:'Click to start a pass — click again to add a redirect/bump — double-click or Enter to finish. Draw as many passes as needed.', shot:'Draw a shot from the puck',
     arrow:'Draw a straight arrow (diagram only)', pen:'Freehand draw (diagram only)',
     text:'Click anywhere, on or off the ice, to drop a label; double-click a label to edit',
     pan:'Drag to move the view', erase:'Click a piece or path to delete it' };
