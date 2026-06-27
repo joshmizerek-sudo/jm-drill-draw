@@ -882,7 +882,7 @@ function render(){
   clear();
   panels().forEach(p=>drawRinkBg(p));
   // zones under everything
-  pieces.filter(p=>p.type==='zone').forEach(p=>drawPiece(p,{}));
+  pieces.filter(p=>p.type==='zone').forEach(p=>drawPiece(p,null));
   // paths under pieces
   paths.forEach(p=>drawPath(p));
   // pieces (animated positions if mid-play or scrubbed)
