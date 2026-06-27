@@ -337,25 +337,38 @@ function drawRinkBg(p){
   const nzdot=(fx,fy)=>{ ctx.fillStyle=red; ctx.beginPath(); ctx.arc(X(fx),Y(fy),0.95*s,0,7); ctx.fill(); };
   const crease=(gx,dir)=>{ ctx.fillStyle='rgba(120,180,235,.18)'; ctx.strokeStyle=red; ctx.lineWidth=thin;
     ctx.beginPath(); ctx.arc(X(gx),Y(42.5),6*s, dir>0?-Math.PI/2:Math.PI/2, dir>0?Math.PI/2:3*Math.PI/2, false); ctx.closePath(); ctx.fill(); ctx.stroke(); };
-  const netbox=(gx,dir)=>{ const d=3.4*s, w=6*s, r=0.9*s;
-    const x0=X(gx), y0=Y(42.5)-w/2, x1=x0+dir*d;
-    const L=Math.min(x0,x1), R=Math.max(x0,x1), T=y0, B=y0+w;
+  const netbox=(gx,dir)=>{
+    // dir=1: left net (goal line at X(gx), net extends LEFT toward end boards)
+    // dir=-1: right net (goal line at X(gx), net extends RIGHT toward end boards)
+    const d=3.4*s, w=6*s, r=0.8*s;
+    const gl=X(gx), bk=gl-dir*d;  // goal line x, back-of-net x
+    const L=Math.min(gl,bk), R=Math.max(gl,bk);
+    const T=Y(42.5)-w/2, B=Y(42.5)+w/2;
     ctx.fillStyle=greyfill; ctx.strokeStyle=red;
-    // filled body
+    // filled interior
     ctx.beginPath();
-    ctx.moveTo(L,T); ctx.lineTo(R,T);
-    if(dir>0){ ctx.lineTo(R,B-r); ctx.quadraticCurveTo(R,B,R-r,B); ctx.lineTo(L+r,B); ctx.quadraticCurveTo(L,B,L,B-r); }
-    else      { ctx.lineTo(R-r,B); ctx.quadraticCurveTo(R,B,R,B-r); ctx.lineTo(L,B-r); ctx.quadraticCurveTo(L,B,L+r,B); }
+    if(dir>0){ // left net: back on left, goal line on right
+      ctx.moveTo(R,T); ctx.lineTo(R,B);
+      ctx.lineTo(L+r,B); ctx.quadraticCurveTo(L,B,L,B-r);
+      ctx.lineTo(L,T+r); ctx.quadraticCurveTo(L,T,L+r,T);
+    } else {   // right net: back on right, goal line on left
+      ctx.moveTo(L,T); ctx.lineTo(L,B);
+      ctx.lineTo(R-r,B); ctx.quadraticCurveTo(R,B,R,B-r);
+      ctx.lineTo(R,T+r); ctx.quadraticCurveTo(R,T,R-r,T);
+    }
     ctx.closePath(); ctx.fill();
-    // goal line — thick
-    ctx.lineWidth=thin*2; ctx.beginPath(); ctx.moveTo(x0,T); ctx.lineTo(x0,B); ctx.stroke();
-    // posts + back
-    ctx.lineWidth=thin;
-    ctx.beginPath();
-    ctx.moveTo(x0,T); ctx.lineTo(dir>0?R:L,T);
-    if(dir>0){ ctx.lineTo(R,B-r); ctx.quadraticCurveTo(R,B,R-r,B); ctx.lineTo(L+r,B); ctx.quadraticCurveTo(L,B,L,B-r); }
-    else      { ctx.lineTo(R-r,B); ctx.quadraticCurveTo(R,B,R,B-r); ctx.lineTo(L,B-r); ctx.quadraticCurveTo(L,B,L+r,B); }
-    ctx.lineTo(x0,B); ctx.stroke(); };
+    // goal line — thick vertical bar
+    ctx.lineWidth=thin*2; ctx.beginPath(); ctx.moveTo(gl,T); ctx.lineTo(gl,B); ctx.stroke();
+    // posts and back — thin
+    ctx.lineWidth=thin; ctx.beginPath();
+    if(dir>0){
+      ctx.moveTo(gl,T); ctx.lineTo(L+r,T); ctx.quadraticCurveTo(L,T,L,T+r);
+      ctx.lineTo(L,B-r); ctx.quadraticCurveTo(L,B,L+r,B); ctx.lineTo(gl,B);
+    } else {
+      ctx.moveTo(gl,T); ctx.lineTo(R-r,T); ctx.quadraticCurveTo(R,T,R,T+r);
+      ctx.lineTo(R,B-r); ctx.quadraticCurveTo(R,B,R-r,B); ctx.lineTo(gl,B);
+    }
+    ctx.stroke(); };
   const trapezoid=(gx,boardx)=>{ if(!showTrap)return; ctx.strokeStyle=red; ctx.lineWidth=thin;
     ctx.beginPath(); ctx.moveTo(X(gx),Y(42.5-11)); ctx.lineTo(X(boardx),Y(42.5-14)); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(X(gx),Y(42.5+11)); ctx.lineTo(X(boardx),Y(42.5+14)); ctx.stroke(); };
