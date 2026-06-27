@@ -60,19 +60,27 @@
   <div class="body">
     <!-- TRAY -->
     <div class="tray">
-      <h4>Players</h4>
-      <div class="swatchrow" id="swatches"></div>
-      <div class="pieces" id="skaters"></div>
-      <div class="pieces" id="positions"></div>
+      <h4 class="tray-toggle" data-target="sec-players">Players <span class="tray-arrow">▾</span></h4>
+      <div class="tray-sec" id="sec-players">
+        <div class="swatchrow" id="swatches"></div>
+        <div class="pieces" id="skaters"></div>
+        <div class="pieces" id="positions"></div>
+      </div>
 
-      <h4>Objects</h4>
-      <div class="pieces three-col" id="equip"></div>
+      <h4 class="tray-toggle" data-target="sec-objects">Objects <span class="tray-arrow">▾</span></h4>
+      <div class="tray-sec" id="sec-objects">
+        <div class="pieces three-col" id="equip"></div>
+      </div>
 
-      <h4>Move</h4>
-      <div class="swatchrow" id="objcolors"></div>
+      <h4 class="tray-toggle" data-target="sec-move">Move <span class="tray-arrow">▾</span></h4>
+      <div class="tray-sec" id="sec-move">
+        <div class="swatchrow" id="objcolors"></div>
+      </div>
 
-      <h4>Tools</h4>
-      <div class="toolgrid" id="tools"></div>
+      <h4 class="tray-toggle" data-target="sec-tools">Tools <span class="tray-arrow">▾</span></h4>
+      <div class="tray-sec" id="sec-tools">
+        <div class="toolgrid" id="tools"></div>
+      </div>
     </div>
 
     <!-- STAGE -->

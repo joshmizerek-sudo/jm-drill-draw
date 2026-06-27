@@ -54,6 +54,13 @@
     padding:5px 6px;overflow-y:auto}
   .tray h4{margin:8px 2px 4px;font-size:9px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted)}
   .tray h4:first-child{margin-top:2px}
+  .tray-toggle{cursor:pointer;display:flex;justify-content:space-between;align-items:center;
+    padding:3px 4px;border-radius:5px;user-select:none}
+  .tray-toggle:hover{background:var(--panel2);color:var(--ink)}
+  .tray-arrow{font-size:10px;transition:transform .18s}
+  .tray-toggle.collapsed .tray-arrow{transform:rotate(-90deg)}
+  .tray-sec{overflow:hidden;transition:max-height .2s ease}
+  .tray-sec.collapsed{max-height:0!important}
   .toolgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
   .tool{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 4px;
     display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px;font-weight:600;color:var(--muted)}
