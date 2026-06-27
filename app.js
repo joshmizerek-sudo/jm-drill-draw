@@ -427,10 +427,30 @@ function drawPieceShape(c, p, scale, thumb){
       const r=1.1*z*size; c.fillStyle=p.color||'#111'; c.beginPath(); c.ellipse(0,0,r,r*0.6,0,0,7); c.fill();
       c.strokeStyle='#444'; c.lineWidth=1; c.stroke(); break; }
     case 'net':{
-      const w=6*z*size,d=3.6*z*size; c.strokeStyle=p.color||'#D11C2C'; c.lineWidth=Math.max(2,0.6*z);
-      c.fillStyle='rgba(209,28,44,.12)';
-      c.beginPath(); c.moveTo(-d/2,-w/2); c.lineTo(d/2,-w/2*0.7); c.lineTo(d/2,w/2*0.7); c.lineTo(-d/2,w/2); c.closePath();
-      c.fill(); c.stroke(); break; }
+      // Hockey net: rectangular opening (front) + rounded back
+      const W=6.2*z*size, D=3.8*z*size, lw=Math.max(2,0.65*z);
+      const fl=-W/2, fr=W/2;   // front left/right
+      const ft=-D*0.28, fb=D*0.72; // front top/bottom (goal line near top)
+      const br=D*0.72;           // back depth radius
+      c.strokeStyle=p.color||'#D11C2C'; c.lineWidth=lw;
+      c.fillStyle='rgba(209,28,44,.10)';
+      // filled interior
+      c.beginPath();
+      c.moveTo(fl,ft); c.lineTo(fr,ft);
+      c.lineTo(fr,fb);
+      c.arc(0,fb,fr,0,Math.PI);
+      c.lineTo(fl,fb); c.lineTo(fl,ft);
+      c.closePath(); c.fill();
+      // goal line (front bar — thicker)
+      c.beginPath(); c.moveTo(fl,ft); c.lineTo(fr,ft);
+      c.lineWidth=lw*1.6; c.stroke();
+      // side posts
+      c.lineWidth=lw;
+      c.beginPath(); c.moveTo(fl,ft); c.lineTo(fl,fb); c.stroke();
+      c.beginPath(); c.moveTo(fr,ft); c.lineTo(fr,fb); c.stroke();
+      // rounded back
+      c.beginPath(); c.arc(0,fb,fr,0,Math.PI); c.stroke();
+      break; }
     case 'cone':{
       const r=1.7*z*size; c.fillStyle=p.color||'#F2811D'; c.beginPath();
       c.moveTo(0,-r*1.3); c.lineTo(r,r); c.lineTo(-r,r); c.closePath(); c.fill();
