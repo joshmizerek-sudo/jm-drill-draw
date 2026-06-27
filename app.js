@@ -95,6 +95,8 @@ let pendingStamp=false; // keep placing copies until Esc
 let playerColor='blue';
 let passBuilding=null;  // {path} click-based pass being built
 let passCursor=null;    // current mouse pos for live pass preview
+let shotBuilding=null;  // {path} click-based shot being built
+let shotCursor=null;    // current mouse pos for live shot preview
 let sel=null;            // primary {kind:'piece'|'path', id}
 let selSet=[];           // full selection (one or many)
 let marquee=null;        // rubber-band box
@@ -735,6 +737,15 @@ function render(){
     ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
     ctx.setLineDash([]); ctx.restore();
   }
+  // live preview of shot being built
+  if(shotBuilding && shotCursor){
+    const pts=shotBuilding.path.pts; const last=pts[pts.length-1];
+    const a=W2S(last.x,last.y), b=W2S(shotCursor.x,shotCursor.y);
+    ctx.save(); ctx.strokeStyle='#0C2233'; ctx.globalAlpha=0.45;
+    ctx.lineWidth=Math.max(2,0.55*cam.s);
+    ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
+    ctx.restore();
+  }
   updateHint();
 }
 
@@ -838,6 +849,17 @@ cv.addEventListener('pointerdown',e=>{
     }
     passCursor={x:wx,y:wy}; updateInspector(); render(); return;
   }
+  if(tool==='shot'){
+    if(!shotBuilding){
+      pushUndo();
+      const np={id:id(),type:'shot',color:(activeColor||'#0C2233'),pts:[{x:wx,y:wy}],owner:null,delay:0,dur:T,_lut:null};
+      paths.push(np); shotBuilding={path:np}; selOne('path',np.id);
+      toast('Click to add deflection points — right-click or Enter to finish');
+    } else {
+      shotBuilding.path.pts.push({x:wx,y:wy});
+    }
+    shotCursor={x:wx,y:wy}; updateInspector(); render(); return;
+  }
   if(tool==='erase'){
     const pc=pieceAt(wx,wy); if(pc){ pushUndo(); pieces=pieces.filter(p=>p!==pc); paths=paths.filter(p=>p.owner!==pc.id); selOne(null); updateInspector(); render(); return; }
     const pa=pathAt(wx,wy); if(pa){ pushUndo(); paths=paths.filter(p=>p!==pa); selOne(null); updateInspector(); render(); }
@@ -856,6 +878,7 @@ cv.addEventListener('pointerdown',e=>{
 cv.addEventListener('pointermove',e=>{
   const [wx,wy]=S2W(e.offsetX,e.offsetY);
   if(passBuilding){ passCursor={x:wx,y:wy}; render(); return; }
+  if(shotBuilding){ shotCursor={x:wx,y:wy}; render(); return; }
   if(panStart){ cam.tx=panStart.tx+(e.offsetX-panStart.x); cam.ty=panStart.ty+(e.offsetY-panStart.y); render(); return; }
   if(marquee){ marquee.x1=wx; marquee.y1=wy; render(); return; }
   if(drag && drag.group){ const dx=wx-drag.lastx, dy=wy-drag.lasty; drag.lastx=wx; drag.lasty=wy;
@@ -901,10 +924,14 @@ cv.addEventListener('pointerup',e=>{
 cv.addEventListener('dblclick',e=>{
   if(building){ finishBuilding(); return; }
   if(passBuilding){
-    // dblclick fires two clicks first — remove the duplicate last point
     const pts=passBuilding.path.pts;
     if(pts.length>1) pts.pop();
     passBuilding=null; passCursor=null; selOne(null); updateInspector(); render(); return;
+  }
+  if(shotBuilding){
+    const pts=shotBuilding.path.pts;
+    if(pts.length>1) pts.pop();
+    shotBuilding=null; shotCursor=null; selOne(null); updateInspector(); render(); return;
   }
   const [wx,wy]=S2W(e.offsetX,e.offsetY); const pc=pieceAt(wx,wy);
   if(pc && pc.type==='text'){ const s=window.prompt('Edit text:', pc.text||''); if(s!==null){ pushUndo(); pc.text=s.trim(); render(); } }
@@ -912,6 +939,7 @@ cv.addEventListener('dblclick',e=>{
 cv.addEventListener('contextmenu',e=>{
   e.preventDefault();
   if(passBuilding){ passBuilding=null; passCursor=null; selOne(null); updateInspector(); render(); return; }
+  if(shotBuilding){ shotBuilding=null; shotCursor=null; selOne(null); updateInspector(); render(); return; }
   if(building){ finishBuilding(); return; }
 });
 cv.addEventListener('wheel',e=>{ e.preventDefault();
@@ -1133,6 +1161,7 @@ window.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT')return;
   if(building && (e.key==='Enter'||e.key==='Escape')){ e.preventDefault(); finishBuilding(); return; }
   if(passBuilding && (e.key==='Enter'||e.key==='Escape')){ e.preventDefault(); passBuilding=null; passCursor=null; selOne(null); updateInspector(); render(); return; }
+  if(shotBuilding && (e.key==='Enter'||e.key==='Escape')){ e.preventDefault(); shotBuilding=null; shotCursor=null; selOne(null); updateInspector(); render(); return; }
   if(e.code==='Space'){ e.preventDefault(); togglePlay(); }
   else if(e.key==='Escape'){ pendingType=null; pendingOpts=null; pendingStamp=false; pendingPick=null; cv.style.cursor=''; selOne(null); updateInspector(); render(); updateHint(); document.getElementById('modal').classList.remove('show'); }
   else if((e.key==='Delete'||e.key==='Backspace') && selSet.length){ e.preventDefault(); deleteSelection(); }
