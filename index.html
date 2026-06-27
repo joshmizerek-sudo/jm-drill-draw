@@ -1,150 +1,190 @@
 <!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rink Lab — Drill Animator</title>
+<title>JM Drill Draw</title>
 <link rel="stylesheet" href="style.css">
 
-
 <div class="app">
-  <!-- TOP -->
+
+  <!-- TOP BAR -->
   <div class="top">
-    <div class="brand"><span class="mark">▷</span><div>RINK&nbsp;LAB<small>DRILL ANIMATOR</small></div></div>
+    <div class="brand"><span class="mark">▷</span><div>JM&nbsp;DRILL&nbsp;DRAW<small>HOCKEY ANIMATOR</small></div></div>
+
+    <div class="mode-toggle">
+      <button id="modeAnimate" class="mode-btn on" title="Skate and Pass paths animate on Play">Animate</button>
+      <button id="modeDraw"    class="mode-btn"    title="All paths are static diagram lines">2D Draw</button>
+    </div>
 
     <span class="lbl">View</span>
     <div class="seg" id="viewSeg"></div>
 
-    <span class="lbl">Rinks</span>
+    <span class="lbl">Rink</span>
     <select id="rinkSel" class="tbtn" style="padding:6px 8px;-webkit-appearance:menulist">
       <option value="full">Full sheet</option>
       <option value="half">Half sheet</option>
       <option value="halves">Two half sheets</option>
       <option value="twofull">Two full sheets</option>
     </select>
-    <label class="tchk" style="color:var(--muted);font-weight:600"><input type="checkbox" id="trapChk" checked> Trapezoid</label>
 
-    <span class="lbl">Centre</span>
-    <select id="logoSel" class="tbtn" style="padding:6px 8px;-webkit-appearance:menulist">
+    <div class="spacer"></div>
+
+    <button class="tbtn accent" id="libraryBtn">📋 My Drills</button>
+    <button class="tbtn ghost"  id="exportBtn"  title="Download drill as .json file">⬇ Export</button>
+    <button class="tbtn ghost"  id="importBtn"  title="Load drill from .json file">⬆ Import</button>
+    <button class="tbtn ghost"  id="clearBtn">Clear</button>
+    <button class="tbtn"        id="helpBtn">?</button>
+
+    <input type="file" id="imgFile"  accept="image/*"             hidden>
+    <input type="file" id="jsonFile" accept="application/json,.json" hidden>
+    <input type="file" id="logoFile" accept="image/*"             hidden>
+    <input type="file" id="refFile"  accept="image/*"             hidden>
+  </div>
+
+  <div class="body">
+
+    <!-- SIDEBAR -->
+    <div class="tray">
+
+      <!-- Players -->
+      <div class="tsec open" id="tsec-players">
+        <div class="tsec-hdr">Players <span class="chev">▾</span></div>
+        <div class="tsec-body">
+          <div class="tray-lbl">Team Color</div>
+          <div class="swatchrow" id="swatches"></div>
+          <div class="pieces-grid" id="skaters"></div>
+          <div class="pieces-grid" id="positions"></div>
+        </div>
+      </div>
+
+      <!-- Move / Draw -->
+      <div class="tsec open" id="tsec-move">
+        <div class="tsec-hdr">Move <span class="chev">▾</span></div>
+        <div class="tsec-body">
+          <div class="tray-lbl">Line Color</div>
+          <div class="swatchrow" id="objcolors"></div>
+          <div class="tray-lbl">Style</div>
+          <div class="style-grid" id="lineStyles"></div>
+        </div>
+      </div>
+
+      <!-- Objects -->
+      <div class="tsec open" id="tsec-objects">
+        <div class="tsec-hdr">Objects <span class="chev">▾</span></div>
+        <div class="tsec-body">
+          <div class="pieces-grid" id="equip"></div>
+          <button class="tbtn ghost imgbtn" id="imgBtn">＋ Insert Image</button>
+        </div>
+      </div>
+
+      <!-- Tools -->
+      <div class="tsec open" id="tsec-tools">
+        <div class="tsec-hdr">Tools <span class="chev">▾</span></div>
+        <div class="tsec-body">
+          <div class="mini-tools" id="tools"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CANVAS -->
+    <div class="stage">
+      <canvas id="cv"></canvas>
+      <div class="hint" id="hint"></div>
+      <div class="zoomctl">
+        <button id="zin"  title="Zoom in">＋</button>
+        <button id="zout" title="Zoom out">－</button>
+        <button id="zfit" title="Fit view" style="font-size:11px">FIT</button>
+      </div>
+      <div class="inspect" id="inspect">
+        <div class="title"><span id="inspTitle">Selection</span><button id="inspClose">×</button></div>
+        <div id="inspBody"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TRANSPORT -->
+  <div class="transport">
+    <button class="play" id="playBtn" title="Play / Pause (Space)">▶</button>
+    <div class="scrub">
+      <input type="range" id="scrubber" min="0" max="1000" value="0">
+      <span class="time" id="timeLbl">0.0s / 5.0s</span>
+    </div>
+    <button class="tbtn" id="staggerBtn" title="Stagger start times so pieces move in sequence">⇥ Stagger</button>
+    <label class="tchk"><input type="checkbox" id="loopChk"> Loop</label>
+    <label class="tchk">Speed <input type="range" id="speed" min="2" max="12" step="0.5" value="5" style="width:80px"></label>
+    <select id="logoSel" class="tbtn" style="padding:6px 8px;-webkit-appearance:menulist;font-size:11px" title="Centre ice logo">
       <option value="none">No logo</option>
       <option value="anchorage" selected>Anchorage Academy</option>
       <option value="krakenS">Seattle Kraken</option>
       <option value="youthS">Kraken (mono)</option>
       <option value="anchorLight">Anchor (ice)</option>
       <option value="anchorNavy">Anchor (navy)</option>
-      <option value="upload">Upload…</option>
+      <option value="upload">Upload logo…</option>
     </select>
-
-    <div class="spacer"></div>
-    <select id="refSel" class="tbtn" style="padding:6px 8px;-webkit-appearance:menulist" title="Drop a drill diagram on the ice to trace and animate over">
-      <option value="">Reference…</option>
-      <option value="stations">10U Stealth (stations)</option>
-      <option value="swing">Figure-8 swing</option>
-      <option value="flow">Flow / regroup</option>
-      <option value="cones">Cone weave</option>
-      <option value="uploadref">Upload…</option>
-    </select>
-    <button class="tbtn ghost" id="demoBtn" title="Load the 2v1 breakout example">▶ Demo&nbsp;drill</button>
-    <button class="tbtn ghost" id="imgBtn" title="Insert a logo or photo for a client">＋ Image</button>
-    <button class="tbtn ghost" id="exportBtn">Save</button>
-    <button class="tbtn ghost" id="importBtn">Open</button>
-    <button class="tbtn ghost" id="clearBtn">Clear</button>
-    <button class="tbtn" id="helpBtn">?</button>
-    <input type="file" id="imgFile" accept="image/*" hidden>
-    <input type="file" id="jsonFile" accept="application/json,.json" hidden>
-    <input type="file" id="logoFile" accept="image/*" hidden>
-    <input type="file" id="refFile" accept="image/*" hidden>
+    <label class="tchk" style="font-size:11px;color:var(--muted)"><input type="checkbox" id="trapChk" checked> Trap</label>
   </div>
 
-  <div class="body">
-    <!-- TRAY -->
-    <div class="tray">
-      <h4>Tools</h4>
-      <div class="toolgrid" id="tools"></div>
-
-      <h4>Colour · objects &amp; lines</h4>
-      <div class="swatchrow" id="objcolors"></div>
-
-      <h4>Player colour</h4>
-      <div class="swatchrow" id="swatches"></div>
-
-      <h4>Skaters</h4>
-      <div class="pieces" id="skaters"></div>
-
-      <h4>Positions</h4>
-      <div class="pieces" id="positions"></div>
-
-      <h4>Equipment</h4>
-      <div class="pieces" id="equip"></div>
-    </div>
-
-    <!-- STAGE -->
-    <div class="stage">
-      <canvas id="cv"></canvas>
-      <div class="hint" id="hint"></div>
-      <div class="zoomctl">
-        <button id="zin" title="Zoom in">＋</button>
-        <button id="zout" title="Zoom out">－</button>
-        <button id="zfit" title="Fit view" style="font-size:12px">FIT</button>
-      </div>
-
-      <!-- INSPECTOR -->
-      <div class="inspect" id="inspect">
-        <div class="title"><span id="inspTitle">Selection</span><button id="inspClose">×</button></div>
-        <div id="inspBody"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TRANSPORT -->
-  <div class="transport">
-    <button class="play" id="playBtn" title="Play / pause (Space)">▶</button>
-    <div class="scrub">
-      <input type="range" id="scrubber" min="0" max="1000" value="0">
-      <span class="time" id="timeLbl">0.0s / 5.0s</span>
-    </div>
-    <button class="tbtn" id="staggerBtn" title="Space out start times so pieces move one after another">⇥ Stagger</button>
-    <label class="tchk"><input type="checkbox" id="loopChk"> Loop</label>
-    <label class="tchk">Speed
-      <input type="range" id="speed" min="2" max="12" step="0.5" value="5" style="width:90px">
-    </label>
-  </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
-<!-- HELP -->
+<!-- ═══ DRILL LIBRARY MODAL ═══ -->
+<div class="modal" id="libraryModal">
+  <div class="card lib-card">
+    <div class="lib-head">
+      <h2 style="margin:0">My Drills</h2>
+      <button class="tbtn accent" id="libSaveBtn">+ Save Current</button>
+    </div>
+    <div id="libEmpty" class="lib-empty">No saved drills yet — create a drill and click Save Current.</div>
+    <div id="libList"  class="lib-list"></div>
+    <div class="closerow" style="margin-top:16px">
+      <button class="tbtn" id="libClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SAVE NAME MODAL ═══ -->
+<div class="modal" id="saveModal">
+  <div class="card" style="width:360px;padding:24px">
+    <h3 style="margin:0 0 14px">Name this drill</h3>
+    <input type="text" id="drillNameInput" placeholder="e.g. 2v1 Breakout"
+      style="width:100%;padding:10px 12px;background:var(--panel);border:1px solid var(--line);
+             border-radius:8px;color:var(--ink);font:inherit;font-size:15px">
+    <div class="row2" style="margin-top:14px">
+      <button class="tbtn" id="saveCancel">Cancel</button>
+      <button class="tbtn" id="saveConfirm"
+        style="background:var(--accent);color:#04141c;border-color:var(--accent);font-weight:700">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ HELP MODAL ═══ -->
 <div class="modal" id="modal">
   <div class="card">
-    <h2>Rink Lab — quick start</h2>
-    <p>A whiteboard that <b>moves</b>. Drop pieces on the ice, draw where they travel, press play.</p>
+    <h2>JM Drill Draw — Quick Start</h2>
 
-    <h3>Make a piece move</h3>
+    <h3>Animate mode</h3>
     <ol>
-      <li>Click a <b>skater</b> (or any piece) in the tray, then click the ice to place it.</li>
-      <li>Pick the <b>Move</b> tool and <b>drag from that piece</b> to draw where it travels. You'll see a shaded <b>lane</b> showing the range, with a faded ghost of the piece at the destination.</li>
-      <li>Press <b>Play</b>. The piece glides along the lane. Give several pieces lanes and they move together.</li>
-      <li>Reshape any lane: <b>Select</b> it and drag the dots. Move the piece and its lane follows.</li>
-      <li>Want a rush that unfolds in order? Hit <b>⇥ Stagger</b>, or select a lane and set its <b>Start delay</b> and <b>Travel time</b>.</li>
-    </ol>
-    <p class="mini">The <b>Skate</b>, <b>Pass</b>, <b>Shot</b>, <b>Arrow</b> and <b>Pen</b> tools draw diagram lines only — they never move anything. Use <b>Move</b> for animation.</p>
-
-    <h3>Carry &amp; pass a puck</h3>
-    <ol>
-      <li>Give your players their <b>Move</b> routes first.</li>
-      <li>Select a <b>puck</b>. In its panel, <b>Set carrier</b> and click the player who starts with it.</li>
-      <li><b>Add pass</b> and click the receiver. The puck rides the carrier, then passes to where the receiver <i>will be</i> (a lead pass), then rides them. Chain more passes for give-and-go, D-to-D, breakouts.</li>
-      <li>Adjust each pass's timing with its slider so it lands on the tape.</li>
+      <li>Pick a skater from <b>Players</b> and click the ice to place them.</li>
+      <li>In <b>Move → Style</b>, pick <b>Skate</b>. Click the player, then click waypoints for where they go. Double-click or <kbd>Enter</kbd> to finish.</li>
+      <li>Press <b>Play</b> — the player glides along the path.</li>
+      <li>For a puck, pick <b>Pass</b> style, click the carrier's spot, add waypoints, finish. The puck follows on Play.</li>
     </ol>
 
-    <h3>Build the picture</h3>
-    <ol>
-      <li><b>Equipment</b> tray: nets, pucks, cones, tires, bumpers, dots, goalie, coach.</li>
-      <li><b>View</b> isolates a zone (D-zone / neutral / O-zone). <b>2 rinks</b> runs split-ice stations.</li>
-      <li><b>＋ Image</b> drops in a client logo or photo; drag and resize it like any piece.</li>
-      <li><b>Select</b> tool: click to pick one, <b>drag a box</b> over empty ice to select many, <b>Shift-click</b> to add or remove. Then drag any to move them together, recolour, <kbd>⌘/Ctrl D</kbd> to duplicate, or <kbd>Delete</kbd> to remove the whole group.</li>
-    </ol>
+    <h3>2D Draw mode</h3>
+    <p>Toggle <b>2D Draw</b> at the top. Paths become static diagram lines — great for printing or whiteboard-style planning.</p>
 
-    <h3>Keep your work</h3>
-    <p><b>Save</b> downloads the drill as a file; <b>Open</b> loads it back. <kbd>Space</kbd> play, <kbd>Esc</kbd> deselect, <kbd>Ctrl/⌘ Z</kbd> undo.</p>
+    <h3>Speed &amp; timing</h3>
+    <p>Select a path, then use <b>Start delay</b> and <b>Travel time</b> in the panel that appears bottom-right. Hit <b>⇥ Stagger</b> to automatically space out multiple players.</p>
+
+    <h3>Save your drills</h3>
+    <p>Click <b>My Drills</b> to name and save drills inside the app — open them any time. Use <b>⬇ Export</b> to download a backup file.</p>
+
+    <h3>Keyboard shortcuts</h3>
+    <p><kbd>Space</kbd> play/pause &nbsp;·&nbsp; <kbd>Esc</kbd> deselect &nbsp;·&nbsp;
+       <kbd>Ctrl/⌘ Z</kbd> undo &nbsp;·&nbsp; <kbd>S</kbd> skate &nbsp;·&nbsp;
+       <kbd>P</kbd> pass &nbsp;·&nbsp; <kbd>V</kbd> select &nbsp;·&nbsp; <kbd>Delete</kbd> remove</p>
 
     <div class="closerow"><button class="tbtn" id="helpClose">Got it</button></div>
   </div>
