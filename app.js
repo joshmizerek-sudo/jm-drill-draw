@@ -1632,11 +1632,9 @@ requestAnimationFrame(tick);
 // collapsible tray sections
 document.querySelectorAll('.tray-toggle').forEach(h=>{
   const sec=document.getElementById(h.dataset.target);
-  // set initial max-height so transition works
-  sec.style.maxHeight=sec.scrollHeight+'px';
+  sec.style.maxHeight='600px'; // large enough for any section
   h.addEventListener('click',()=>{
     const collapsed=h.classList.toggle('collapsed');
-    if(collapsed){ sec.style.maxHeight=sec.scrollHeight+'px'; requestAnimationFrame(()=>sec.classList.add('collapsed')); }
-    else { sec.classList.remove('collapsed'); sec.style.maxHeight=sec.scrollHeight+'px'; }
+    sec.style.maxHeight=collapsed?'0':'600px';
   });
 });
