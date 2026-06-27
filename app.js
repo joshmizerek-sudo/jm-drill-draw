@@ -682,8 +682,8 @@ function drawScallops(ctx, pts, col, camScale){
   function normAt(s){ const a=getAt(Math.max(0,s-1)), b=getAt(Math.min(total,s+1));
     const dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy)||1; return [-dy/len,dx/len]; }
 
-  const amp=Math.max(7,4.8*camScale);   // height of each C (perpendicular)
-  const wl=amp*2.4;                     // width of each C (along path)
+  const amp=Math.max(4,2.8*camScale);   // height of each C (perpendicular)
+  const wl=amp*1.6;                     // width of each C (along path) — tight for C-shape look
 
   ctx.save(); ctx.strokeStyle=col; ctx.lineWidth=Math.max(2,0.55*camScale);
   ctx.lineJoin='round'; ctx.lineCap='round';
@@ -696,8 +696,8 @@ function drawScallops(ctx, pts, col, camScale){
     const [ex,ey]=getAt(sEnd);
     const [mx,my]=getAt(sMid);
     const [nx,ny]=normAt(sMid);
-    // control point at 2*amp so bezier peak = amp (quadratic midpoint formula)
-    ctx.quadraticCurveTo(mx+nx*amp*2*side, my+ny*amp*2*side, ex, ey);
+    // control point at 2.8*amp for a sharper C (more pronounced than sine)
+    ctx.quadraticCurveTo(mx+nx*amp*2.8*side, my+ny*amp*2.8*side, ex, ey);
     s=sEnd; side=-side;
     if(s>=total) break;
   }
