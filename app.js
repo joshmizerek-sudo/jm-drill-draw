@@ -685,7 +685,7 @@ function drawScallops(ctx, pts, col, camScale){
   const amp=Math.max(1.2,0.6*camScale); // very small — tight S/C shapes
   const wl=amp*1.3;                     // width of each C (along path)
 
-  ctx.save(); ctx.strokeStyle=col; ctx.lineWidth=Math.max(2,0.55*camScale);
+  ctx.save(); ctx.strokeStyle=col; ctx.globalAlpha=0.65; ctx.lineWidth=Math.max(1,0.32*camScale);
   ctx.lineJoin='round'; ctx.lineCap='round';
   ctx.beginPath();
   const [sx,sy]=getAt(0); ctx.moveTo(sx,sy);
@@ -718,7 +718,7 @@ function drawAnnotation(p){
     const anc=p.anchors&&p.anchors.length>=2?p.anchors:p.pts;
     const smooth=anc.length>=2?catmull(anc,48).map(q=>W2S(q.x,q.y)):scr;
     drawScallops(ctx, smooth, col, cam.s);
-    arrowHead(smooth, col);
+    ctx.globalAlpha=1; arrowHead(smooth, col);
   }
   else if(p.type==='pass'){ ctx.setLineDash([7,6]); strokePoly(scr); ctx.setLineDash([]); arrowHead(scr,col,true); }
   else if(p.type==='shot'){ shotDouble(scr,col); }
