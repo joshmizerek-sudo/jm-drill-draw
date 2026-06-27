@@ -404,7 +404,6 @@ function drawRinkBg(p){
     } }
 
   boardPath(); ctx.fillStyle='#FFFFFF'; ctx.fill();
-  ctx.lineWidth=board; ctx.strokeStyle=ink; ctx.lineJoin='round'; boardPath(); ctx.stroke();
   ctx.save(); boardPath(); ctx.clip();
 
   const V=(gx,col,w)=>{ ctx.strokeStyle=col; ctx.lineWidth=w; ctx.beginPath(); ctx.moveTo(X(gx),Y(0)); ctx.lineTo(X(gx),Y(RH)); ctx.stroke(); };
@@ -467,6 +466,8 @@ function drawRinkBg(p){
     trapezoid(11,0); netbox(11,1); crease(11,1);
   }
   ctx.restore();
+  // redraw board outline on top so line bleeds are covered
+  ctx.lineWidth=board; ctx.strokeStyle=ink; ctx.lineJoin='round'; boardPath(); ctx.stroke();
 
   if(full && centerLogo && LOGO_IMG[centerLogo] && LOGO_IMG[centerLogo].complete && LOGO_IMG[centerLogo].naturalWidth){
     const img=LOGO_IMG[centerLogo]; const ratio=img.naturalWidth/img.naturalHeight;
@@ -1355,6 +1356,28 @@ refSel.onchange=()=>{ const v=refSel.value; refSel.value='';
   addRefImage(REF_SRC[v]); };
 refFile.onchange=e=>{ const f=e.target.files[0]; if(!f)return;
   const r=new FileReader(); r.onload=()=>addRefImage(r.result); r.readAsDataURL(f); e.target.value=''; };
+
+// image export
+function exportImage(fmt){
+  // render at 2x resolution for sharpness
+  const scale=2;
+  const W=cv.width, H=cv.height;
+  const off=document.createElement('canvas'); off.width=W*scale; off.height=H*scale;
+  const octx=off.getContext('2d');
+  octx.scale(scale,scale);
+  // white background
+  octx.fillStyle='#FFFFFF'; octx.fillRect(0,0,W,H);
+  // copy current canvas
+  octx.drawImage(cv,0,0,W,H);
+  const mime=fmt==='jpg'?'image/jpeg':'image/png';
+  const ext=fmt==='jpg'?'jpg':'png';
+  const a=document.createElement('a');
+  a.href=off.toDataURL(mime,0.95);
+  a.download='drill-'+new Date().toISOString().slice(0,10)+'.'+ext;
+  a.click();
+  toast('Image saved to your downloads');
+}
+document.getElementById('imgExportBtn').onclick=()=>exportImage('jpg');
 
 // save / open
 document.getElementById('exportBtn').onclick=()=>{
