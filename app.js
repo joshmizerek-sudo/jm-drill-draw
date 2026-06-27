@@ -1478,7 +1478,7 @@ function exportImage(fmt){
 document.getElementById('imgExportBtn').onclick=()=>exportImage('jpg');
 
 // save / open
-document.getElementById('exportBtn').onclick=()=>{
+function doSaveDrill(name){
   syncScene();
   const data={v:2,showTrap,centerLogo,
     customLogo: LOGO_SRC.custom||null,
@@ -1488,11 +1488,28 @@ document.getElementById('exportBtn').onclick=()=>{
       pieces:s.pieces.map(p=>({...p,img:undefined,_src:p._src||null})),
       paths:s.paths.map(p=>({...p,_lut:undefined}))
     }))};
+  const safe=name.trim().replace(/[^a-zA-Z0-9 _\-]/g,'').trim()||('drill-'+new Date().toISOString().slice(0,10));
   const blob=new Blob([JSON.stringify(data)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download='practice-'+new Date().toISOString().slice(0,10)+'.json'; a.click();
-  toast('Practice saved to your downloads');
+  a.download=safe+'.json'; a.click();
+  toast('"'+safe+'" saved — move it to your Drills folder');
+}
+document.getElementById('exportBtn').onclick=()=>{
+  const inp=document.getElementById('drillNameInput');
+  inp.value=scenes[currentScene]&&scenes[currentScene].name||'';
+  document.getElementById('saveModal').classList.add('show');
+  setTimeout(()=>inp.select(),80);
 };
+document.getElementById('saveModalCancel').onclick=()=>document.getElementById('saveModal').classList.remove('show');
+document.getElementById('saveModalConfirm').onclick=()=>{
+  const name=document.getElementById('drillNameInput').value;
+  document.getElementById('saveModal').classList.remove('show');
+  doSaveDrill(name);
+};
+document.getElementById('drillNameInput').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){ document.getElementById('saveModalConfirm').click(); }
+  if(e.key==='Escape'){ document.getElementById('saveModal').classList.remove('show'); }
+});
 document.getElementById('importBtn').onclick=()=>document.getElementById('jsonFile').click();
 document.getElementById('jsonFile').onchange=e=>{ const f=e.target.files[0]; if(!f)return;
   const r=new FileReader(); r.onload=()=>{ try{ const o=JSON.parse(r.result); loadData(o); toast('Drill loaded'); }

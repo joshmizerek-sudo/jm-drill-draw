@@ -118,6 +118,22 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- SAVE DRILL MODAL -->
+<div class="modal" id="saveModal">
+  <div class="card" style="max-width:360px">
+    <h2 style="font-size:16px;margin-bottom:12px">Save Drill</h2>
+    <div class="field">
+      <label>Drill name</label>
+      <input type="text" id="drillNameInput" placeholder="e.g. 2v1 Breakout" maxlength="80" style="font-size:14px">
+    </div>
+    <p style="font-size:11px;color:var(--muted);margin:8px 0">File will download — save it to your <strong>Drills</strong> folder.</p>
+    <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+      <button class="tbtn ghost" id="saveModalCancel">Cancel</button>
+      <button class="tbtn" id="saveModalConfirm" style="background:var(--accent);color:#04141c;border-color:var(--accent)">Download</button>
+    </div>
+  </div>
+</div>
+
 <!-- HELP -->
 <div class="modal" id="modal">
   <div class="card">
