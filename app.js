@@ -294,7 +294,7 @@ function fillTray(elid, list){
   const g=document.getElementById(elid); g.innerHTML='';
   list.forEach(it=>{
     const b=document.createElement('button'); b.className='piece';
-    const c=document.createElement('canvas'); c.width=64;c.height=40;
+    const c=document.createElement('canvas'); c.width=48;c.height=30;
     drawThumb(c.getContext('2d'), it.type, it.opts);
     b.appendChild(c);
     const nm=document.createElement('span'); nm.className='nm'; nm.textContent=it.n; b.appendChild(nm);
@@ -303,7 +303,7 @@ function fillTray(elid, list){
   });
 }
 function drawThumb(c,type,opts){
-  c.clearRect(0,0,64,40); c.save(); c.translate(32,18);
+  c.clearRect(0,0,48,30); c.save(); c.translate(24,13);
   const base={type, size:1, color:undefined, num:''};
   if(type==='player'||type==='goalie') base.color=COLORS[playerColor];
   if(type==='player') base.num='7';
