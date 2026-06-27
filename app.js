@@ -376,7 +376,7 @@ function addPiece(type, at, opts){
 }
 function nextNum(){ const used=pieces.filter(p=>p.type==='player'&&p.color===COLORS[playerColor]).length; return used+1; }
 function prettyType(t){ return ({player:'Skater',goalie:'Goalie',coach:'Coach',puck:'Puck',puckstack:'Pucks',net:'Net',cone:'Cone',tire:'Tire',bumper:'Bumper',ring:'Ring',dot:'Dot',zone:'Zone',image:'Image',text:'Text'})[t]||t; }
-function defColor(t){ return ({cone:'#F2811D',net:'#D11C2C',bumper:'#E7B416',dot:'#D11C2C',tire:'#E7B416',puck:'#111418',puckstack:'#111418',ring:'#222831',coach:'#E7B416'})[t]||'#11181f'; }
+function defColor(t){ return ({cone:'#F2811D',net:'#D11C2C',bumper:'#E7B416',dot:'#D11C2C',tire:'#E7B416',puck:'#111418',puckstack:'#111418',ring:'#222831',coach:'#E7B416',zone:'#2FA866'})[t]||'#11181f'; }
 function isDark(hex){ if(!hex)return true; const c=(hex+'').replace('#',''); const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16); return (0.299*r+0.587*g+0.114*b)<140; }
 function escapeHtml(s){ return (s||'').replace(/[&<>"\']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 function getPiece(i){ return pieces.find(p=>p.id===i); }
@@ -572,7 +572,7 @@ function drawPieceShape(c, p, scale, thumb){
     case 'zone':{
       // highlighted area circle — size maps to radius in feet (default ~10ft)
       const r=(thumb?12:10*cam.s)*size;
-      const col=p.color||'#5BC2D6';
+      const col=p.color||'#2FA866';
       c.fillStyle=col; c.globalAlpha=0.15; c.beginPath(); c.arc(0,0,r,0,7); c.fill();
       c.globalAlpha=1; c.strokeStyle=col; c.lineWidth=Math.max(2,0.5*(thumb?1:cam.s));
       c.setLineDash([Math.max(5,0.8*(thumb?1:cam.s)),Math.max(4,0.6*(thumb?1:cam.s))]);
@@ -1270,7 +1270,7 @@ function possessionHTML(p){ const legs=p.legs||[];
   if(legs.length) h+='<button class="tbtn" id="pk_clear" style="width:100%;margin-top:2px">Clear possession</button>';
   return h+'<hr style="border:0;border-top:1px solid var(--line);margin:10px 0">';
 }
-function colorBtns(cur){ const cols=['#11181f','#E8313A','#2FA866','#2F6FE0','#F2811D','#8A2BE2','#FFFFFF'];
+function colorBtns(cur){ const cols=['#11181f','#E8313A','#2FA866','#2F6FE0','#F2811D','#E7B416','#8A2BE2','#5BC2D6','#FFFFFF'];
   return '<div style="display:flex;gap:6px;flex-wrap:wrap">'+cols.map(c=>'<div data-col="'+c+'" style="width:24px;height:24px;border-radius:6px;background:'+c+';cursor:pointer;'+(c==='#FFFFFF'?'border:1px solid #244A66;':'')+(c===cur?'outline:2px solid #5BC2D6;outline-offset:1px;':'')+'"></div>').join('')+'</div>'; }
 function bind(idd,ev,fn){ const el=byId(idd); if(el) el.addEventListener(ev,e=>fn(e.target.value)); }
 function byId(i){ return document.getElementById(i); }
