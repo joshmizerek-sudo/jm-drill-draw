@@ -527,36 +527,14 @@ function drawMotionPath(p){
   const seld = selContains('path',p.id);
   const scr=p.pts.map(q=>W2S(q.x,q.y));
 
-  if(p.isPass){
-    // puck pass: dashed line with arrowhead
-    ctx.save(); ctx.lineJoin='round'; ctx.lineCap='round';
-    ctx.globalAlpha=seld?0.9:0.75;
-    ctx.setLineDash([Math.max(7,2.2*cam.s),Math.max(5,1.6*cam.s)]);
-    ctx.lineWidth=Math.max(2.5,0.7*cam.s); ctx.strokeStyle=col;
-    strokePoly(scr); ctx.setLineDash([]);
-    arrowHead(scr,col); ctx.restore();
-    if(pc){ ctx.save(); ctx.globalAlpha=0.45; drawPieceGhost(pc,p.pts[p.pts.length-1]); ctx.restore(); }
-    if(seld && p.anchors){ p.anchors.forEach(aa=>{ const [hx,hy]=W2S(aa.x,aa.y);
-      ctx.fillStyle='#fff'; ctx.strokeStyle=col; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(hx,hy,Math.max(5,1.2*cam.s),0,7); ctx.fill(); ctx.stroke(); }); }
-    return;
-  }
-
   ctx.save(); ctx.lineJoin='round'; ctx.lineCap='round';
-  // travel lane
-  const laneW=Math.max(9,(pc?pieceRadius(pc)*1.9:5)*cam.s);
-  ctx.strokeStyle=col; ctx.globalAlpha=seld?0.22:0.14; ctx.lineWidth=laneW; strokePoly(scr);
-  // solid centre line (smooth curve)
-  ctx.globalAlpha=1; ctx.lineWidth=Math.max(2.5,0.65*cam.s); ctx.strokeStyle=col; strokePoly(scr);
+  // solid path line
+  ctx.globalAlpha=1; ctx.lineWidth=Math.max(2.5,0.65*cam.s); ctx.strokeStyle=col;
+  if(p.isPass) ctx.setLineDash([Math.max(7,2.2*cam.s),Math.max(5,1.6*cam.s)]);
+  strokePoly(scr); ctx.setLineDash([]);
   arrowHead(scr,col); ctx.restore();
-  // ghost piece at destination
-  if(pc){ ctx.save(); ctx.globalAlpha=0.42; drawPieceGhost(pc,p.pts[p.pts.length-1]); ctx.restore(); }
-  // start badge
-  const [bx,by]=scr[0], br=Math.max(6,1.5*cam.s);
-  ctx.fillStyle=col; ctx.beginPath(); ctx.arc(bx,by,br,0,7); ctx.fill();
-  ctx.fillStyle='#fff'; ctx.font=`700 ${Math.max(9,1.9*cam.s)}px Inter`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('▶',bx+0.5,by);
-  // reshape handles when selected
-  if(seld && p.anchors){ p.anchors.forEach((aa,i)=>{ const [hx,hy]=W2S(aa.x,aa.y);
-    ctx.fillStyle='#fff'; ctx.strokeStyle=col; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(hx,hy,Math.max(5,1.2*cam.s),0,7); ctx.fill(); ctx.stroke(); }); }
+  // faint ghost at destination
+  if(pc){ ctx.save(); ctx.globalAlpha=0.35; drawPieceGhost(pc,p.pts[p.pts.length-1]); ctx.restore(); }
 }
 function drawAnnotation(p){
   if(p.pts.length<2) return;
