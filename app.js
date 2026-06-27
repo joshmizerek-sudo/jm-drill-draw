@@ -756,6 +756,18 @@ function render(){
   const map = showAnim? animatedPositions() : {};
   pieces.forEach(p=>{ if(p.type==='puck'&&p.legs&&p.legs.length) drawPuckJourney(p); });
   pieces.forEach(p=>drawPiece(p, map[p.id]));
+  // rotation handle for selected net
+  const rotPc = selSet.length===1 && selSet[0].kind==='piece' ? getPiece(selSet[0].id) : null;
+  if(rotPc && rotPc.type==='net'){
+    const [sx,sy]=W2S(rotPc.x,rotPc.y);
+    const armLen=38, hx=sx+Math.sin(rotPc.rot||0)*(-armLen), hy=sy+Math.cos(rotPc.rot||0)*(-armLen);
+    ctx.save();
+    ctx.strokeStyle='#5BC2D6'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(hx,hy); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='#5BC2D6'; ctx.strokeStyle='#fff'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(hx,hy,7,0,7); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
   if(marquee){ const a=W2S(marquee.x0,marquee.y0), b=W2S(marquee.x1,marquee.y1);
     ctx.save(); ctx.strokeStyle='#5BC2D6'; ctx.fillStyle='rgba(91,194,214,.12)'; ctx.lineWidth=1.5; ctx.setLineDash([6,4]);
     const rx=Math.min(a[0],b[0]),ry=Math.min(a[1],b[1]),rw=Math.abs(b[0]-a[0]),rh=Math.abs(b[1]-a[1]);
@@ -819,6 +831,7 @@ function distToSeg(px,py,a,b){ const dx=b.x-a.x,dy=b.y-a.y; const L=dx*dx+dy*dy|
   return Math.hypot(px-(a.x+dx*t),py-(a.y+dy*t)); }
 
 let drag=null;       // {piece, ox,oy} or pan
+let rotDrag=null;    // {piece} — dragging the on-canvas rotation handle
 let drawing=null;    // current annotation being drawn
 let panStart=null;
 let building=null;   // motion route being built (multi-segment)
@@ -831,6 +844,13 @@ cv.addEventListener('pointerdown',e=>{
   // mid/right button = pan regardless of tool
   if(e.button===1||e.button===2||tool==='pan'){ pendingType=null; pendingOpts=null; pendingStamp=false; cv.style.cursor=''; panStart={x:e.offsetX,y:e.offsetY,tx:cam.tx,ty:cam.ty}; return; }
 
+  // rotation handle hit-test
+  const rotPcDown = selSet.length===1 && selSet[0].kind==='piece' ? getPiece(selSet[0].id) : null;
+  if(rotPcDown && rotPcDown.type==='net'){
+    const [sx,sy]=W2S(rotPcDown.x,rotPcDown.y);
+    const armLen=38, hx=sx+Math.sin(rotPcDown.rot||0)*(-armLen), hy=sy+Math.cos(rotPcDown.rot||0)*(-armLen);
+    if(Math.hypot(e.offsetX-hx,e.offsetY-hy)<12){ pushUndo(); rotDrag={piece:rotPcDown}; return; }
+  }
   if(pendingPick){ resolvePick(wx,wy); return; }
   if(pendingType){ addPiece(pendingType,{x:wx,y:wy},pendingOpts);
     if(!pendingStamp){ pendingType=null; pendingOpts=null; cv.style.cursor=''; } updateHint(); return; }
@@ -909,6 +929,8 @@ cv.addEventListener('pointerdown',e=>{
 });
 cv.addEventListener('pointermove',e=>{
   const [wx,wy]=S2W(e.offsetX,e.offsetY);
+  if(rotDrag){ const p=rotDrag.piece; const [sx,sy]=W2S(p.x,p.y);
+    p.rot=Math.atan2(e.offsetX-sx,sy-e.offsetY); render(); return; }
   if(passBuilding){ passCursor={x:wx,y:wy}; render(); return; }
   if(shotBuilding){ shotCursor={x:wx,y:wy}; render(); return; }
   if(panStart){ cam.tx=panStart.tx+(e.offsetX-panStart.x); cam.ty=panStart.ty+(e.offsetY-panStart.y); render(); return; }
@@ -931,6 +953,7 @@ cv.addEventListener('pointermove',e=>{
 function ctxPreview(p){ drawPath(p); }
 cv.addEventListener('pointerup',e=>{
   if(panStart){ panStart=null; return; }
+  if(rotDrag){ rotDrag=null; render(); return; }
   if(marquee){ finalizeMarquee(); marquee=null; render(); return; }
   if(drag){ drag=null; return; }
   if(seg && building){ const p=building.path;
