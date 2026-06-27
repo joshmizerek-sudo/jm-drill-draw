@@ -79,12 +79,80 @@ function buildViewSeg(){
 }
 
 // =========================================================
+//  SCENES (multi-drill practice)
+// =========================================================
+function makeScene(name){ return {name, pieces:[], paths:[], rinkType:'full', undoStack:[], redoStack:[]}; }
+let scenes=[makeScene('Drill 1')];
+let currentScene=0;
+
+// =========================================================
 //  STATE
 // =========================================================
-let pieces=[];   // {id,type,color,x,y,num,label,size,rot,img}
-let paths=[];    // {id,type,color,pts:[{x,y}],owner,delay,dur,_lut}
+let pieces=scenes[0].pieces;
+let paths=scenes[0].paths;
 let uid=1;
 const id=()=>uid++;
+
+function syncScene(){
+  scenes[currentScene].pieces=pieces;
+  scenes[currentScene].paths=paths;
+  scenes[currentScene].rinkType=rinkConfig;
+  scenes[currentScene].undoStack=undoStack;
+  scenes[currentScene].redoStack=redoStack;
+}
+function loadScene(idx){
+  syncScene();
+  currentScene=idx;
+  const s=scenes[idx];
+  pieces=s.pieces; paths=s.paths;
+  undoStack=s.undoStack; redoStack=s.redoStack;
+  rinkConfig=s.rinkType||'full';
+  document.getElementById('rinkSel').value=rinkConfig;
+  selOne(null); building=null; passBuilding=null; shotBuilding=null; skateBuilding=null;
+  tNow=0; playing=false;
+  try{setPlayUI();}catch(e){}
+  currentView=defaultView(); buildLayoutSeg(); buildViewSeg();
+  fitRect(viewPresets()[0].r);
+  updateInspector(); updateSceneTabs(); render(); updateHint();
+}
+function addScene(){
+  syncScene();
+  const n=scenes.length+1;
+  scenes.push(makeScene('Drill '+n));
+  loadScene(scenes.length-1);
+}
+function deleteScene(idx){
+  if(scenes.length===1){ toast('Need at least one drill'); return; }
+  if(!confirm('Delete "'+scenes[idx].name+'"?')) return;
+  scenes.splice(idx,1);
+  const next=Math.min(idx,scenes.length-1);
+  currentScene=next;
+  const s=scenes[next];
+  pieces=s.pieces; paths=s.paths;
+  undoStack=s.undoStack; redoStack=s.redoStack;
+  rinkConfig=s.rinkType||'full';
+  document.getElementById('rinkSel').value=rinkConfig;
+  selOne(null); currentView=defaultView(); buildLayoutSeg(); buildViewSeg();
+  fitRect(viewPresets()[0].r);
+  updateInspector(); updateSceneTabs(); render();
+}
+function renameScene(idx){
+  const s=prompt('Drill name:',scenes[idx].name); if(s&&s.trim()) scenes[idx].name=s.trim(); updateSceneTabs();
+}
+function updateSceneTabs(){
+  const bar=document.getElementById('scenebar'); if(!bar)return; bar.innerHTML='';
+  scenes.forEach((s,i)=>{
+    const t=document.createElement('button'); t.className='scenetab'+(i===currentScene?' on':'');
+    t.textContent=s.name;
+    t.onclick=()=>loadScene(i);
+    t.ondblclick=(e)=>{ e.stopPropagation(); renameScene(i); };
+    const x=document.createElement('span'); x.textContent='×'; x.className='scenetab-x';
+    x.title='Delete drill'; x.onclick=(e)=>{ e.stopPropagation(); deleteScene(i); };
+    t.appendChild(x); bar.appendChild(t);
+  });
+  const add=document.createElement('button'); add.className='scenetab scenetab-add'; add.textContent='+ Drill';
+  add.onclick=addScene; bar.appendChild(add);
+}
 
 let tool='select';
 let pendingType=null, pendingOpts=null;   // piece (and template) armed to drop at next click
@@ -114,12 +182,14 @@ const COLORS={
   yellow:'#E7B416', green:'#2FA866'
 };
 
-// undo
-let undoStack=[], redoStack=[];
+// undo — per-scene stacks
+let undoStack=scenes[0].undoStack, redoStack=scenes[0].redoStack;
 function snapshot(){ return JSON.stringify({pieces,paths,rinkConfig,uid}); }
 function pushUndo(){ undoStack.push(snapshot()); if(undoStack.length>60)undoStack.shift(); redoStack.length=0; }
 function restore(s){ const o=JSON.parse(s); pieces=o.pieces; paths=o.paths; rinkConfig=o.rinkConfig||'full'; uid=o.uid;
-  paths.forEach(p=>p._lut=null); buildLayoutSeg(); buildViewSeg(); render(); }
+  paths.forEach(p=>p._lut=null);
+  scenes[currentScene].pieces=pieces; scenes[currentScene].paths=paths; scenes[currentScene].rinkType=rinkConfig;
+  buildLayoutSeg(); buildViewSeg(); render(); }
 function undo(){ if(!undoStack.length)return; redoStack.push(snapshot()); restore(undoStack.pop()); selOne(null); updateInspector(); }
 function redo(){ if(!redoStack.length)return; undoStack.push(snapshot()); restore(redoStack.pop()); selOne(null); updateInspector(); }
 
@@ -1200,11 +1270,11 @@ function byId(i){ return document.getElementById(i); }
 function buildLayoutSeg(){
   const sel=document.getElementById('rinkSel'); if(!sel)return;
   sel.value=rinkConfig;
-  sel.onchange=()=>{ pushUndo(); rinkConfig=sel.value; currentView=defaultView(); buildViewSeg();
+  sel.onchange=()=>{ pushUndo(); rinkConfig=sel.value; scenes[currentScene].rinkType=rinkConfig; currentView=defaultView(); buildViewSeg();
     fitRect(viewPresets()[0].r); render(); };
   const tc=document.getElementById('trapChk'); if(tc){ tc.checked=showTrap; tc.onchange=()=>{ showTrap=tc.checked; render(); }; }
 }
-document.getElementById('clearBtn').onclick=()=>{ if(pieces.length||paths.length){ pushUndo(); pieces=[]; paths=[]; selOne(null); updateInspector(); render(); toast('Cleared'); } };
+document.getElementById('clearBtn').onclick=()=>{ if(pieces.length||paths.length){ pushUndo(); pieces=[]; paths=[]; scenes[currentScene].pieces=pieces; scenes[currentScene].paths=paths; selOne(null); updateInspector(); render(); toast('Cleared'); } };
 document.getElementById('zin').onclick=()=>{ zoomBy(1.18); };
 document.getElementById('zout').onclick=()=>{ zoomBy(1/1.18); };
 document.getElementById('zfit').onclick=()=>{ const v=viewPresets().find(p=>p.k===currentView)||viewPresets()[0]; fitRect(v.r); render(); };
@@ -1255,28 +1325,53 @@ refFile.onchange=e=>{ const f=e.target.files[0]; if(!f)return;
 
 // save / open
 document.getElementById('exportBtn').onclick=()=>{
-  const data={v:1,rinkConfig,showTrap,centerLogo,
+  syncScene();
+  const data={v:2,showTrap,centerLogo,
     customLogo: LOGO_SRC.custom||null,
-    pieces:pieces.map(p=>({...p,img:undefined,_src:p._src||null})),
-    paths:paths.map(p=>({...p,_lut:undefined}))};
+    currentScene,
+    scenes: scenes.map(s=>({
+      name:s.name, rinkType:s.rinkType||'full',
+      pieces:s.pieces.map(p=>({...p,img:undefined,_src:p._src||null})),
+      paths:s.paths.map(p=>({...p,_lut:undefined}))
+    }))};
   const blob=new Blob([JSON.stringify(data)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download='drill-'+new Date().toISOString().slice(0,10)+'.json'; a.click();
-  toast('Saved to your downloads');
+  a.download='practice-'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+  toast('Practice saved to your downloads');
 };
 document.getElementById('importBtn').onclick=()=>document.getElementById('jsonFile').click();
 document.getElementById('jsonFile').onchange=e=>{ const f=e.target.files[0]; if(!f)return;
   const r=new FileReader(); r.onload=()=>{ try{ const o=JSON.parse(r.result); loadData(o); toast('Drill loaded'); }
     catch(err){ toast('Could not read that file'); } }; r.readAsDataURL?r.readAsText(f):r.readAsText(f); e.target.value=''; };
-function loadData(o){ pushUndo(); rinkConfig=o.rinkConfig||(o.layout==='double'?'twofull':'full'); if(o.showTrap!==undefined)showTrap=o.showTrap;
-  pieces=(o.pieces||[]).map(p=>{ const q={...p}; if(p._src){ const img=new Image(); img.src=p._src; q.img=img; } return q; });
-  paths=(o.paths||[]).map(p=>({...p,_lut:null}));
-  uid=Math.max(1,...pieces.map(p=>p.id||0),...paths.map(p=>p.id||0))+1;
+function loadData(o){
+  if(o.showTrap!==undefined) showTrap=o.showTrap;
   if(o.customLogo){ LOGO_SRC.custom=o.customLogo; const im=new Image(); im.src=o.customLogo; im.onload=()=>{try{render();}catch(e){}}; LOGO_IMG.custom=im; ensureLogoOption('custom','Custom'); }
-  centerLogo = (o.centerLogo!==undefined)? o.centerLogo : centerLogo;
-  syncLogoSel();
-  currentView=defaultView(); buildLayoutSeg(); buildViewSeg();
-  fitRect(viewPresets()[0].r); selOne(null); updateInspector(); render(); }
+  centerLogo=(o.centerLogo!==undefined)?o.centerLogo:centerLogo; syncLogoSel();
+  // multi-scene format (v2)
+  if(o.scenes && o.scenes.length){
+    scenes=o.scenes.map(s=>{
+      const sc=makeScene(s.name||'Drill');
+      sc.rinkType=s.rinkType||'full';
+      sc.pieces=(s.pieces||[]).map(p=>{ const q={...p}; if(p._src){const img=new Image();img.src=p._src;q.img=img;} return q; });
+      sc.paths=(s.paths||[]).map(p=>({...p,_lut:null}));
+      return sc;
+    });
+    currentScene=Math.min(o.currentScene||0,scenes.length-1);
+  } else {
+    // legacy single-drill format
+    const sc=makeScene('Drill 1');
+    sc.rinkType=o.rinkConfig||(o.layout==='double'?'twofull':'full');
+    sc.pieces=(o.pieces||[]).map(p=>{ const q={...p}; if(p._src){const img=new Image();img.src=p._src;q.img=img;} return q; });
+    sc.paths=(o.paths||[]).map(p=>({...p,_lut:null}));
+    scenes=[sc]; currentScene=0;
+  }
+  const s=scenes[currentScene];
+  pieces=s.pieces; paths=s.paths; undoStack=s.undoStack; redoStack=s.redoStack;
+  rinkConfig=s.rinkType||'full'; document.getElementById('rinkSel').value=rinkConfig;
+  uid=Math.max(1,...scenes.flatMap(sc=>[...sc.pieces.map(p=>p.id||0),...sc.paths.map(p=>p.id||0)]))+1;
+  selOne(null); currentView=defaultView(); buildLayoutSeg(); buildViewSeg();
+  fitRect(viewPresets()[0].r); updateInspector(); updateSceneTabs(); render();
+  toast('Practice loaded — '+scenes.length+' drill'+(scenes.length>1?'s':'')); }
 
 // help
 document.getElementById('helpBtn').onclick=()=>document.getElementById('modal').classList.add('show');
@@ -1374,7 +1469,7 @@ function resize(){ DPR=Math.min(window.devicePixelRatio||1,2);
   cv.width=cv.clientWidth*DPR; cv.height=cv.clientHeight*DPR; render(); }
 window.addEventListener('resize',resize);
 
-buildTools(); buildSwatches(); buildObjColors(); buildPieceTray(); buildLayoutSeg(); buildViewSeg();
+buildTools(); buildSwatches(); buildObjColors(); buildPieceTray(); buildLayoutSeg(); buildViewSeg(); updateSceneTabs();
 setTool('select');
 fitRect({x:0,y:0,w:RW,h:RH});
 resize();
