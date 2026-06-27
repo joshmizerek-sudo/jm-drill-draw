@@ -294,7 +294,7 @@ function fillTray(elid, list){
   const g=document.getElementById(elid); g.innerHTML='';
   list.forEach(it=>{
     const b=document.createElement('button'); b.className='piece';
-    const c=document.createElement('canvas'); c.width=48;c.height=30;
+    const c=document.createElement('canvas'); c.width=56;c.height=36;
     drawThumb(c.getContext('2d'), it.type, it.opts);
     b.appendChild(c);
     const nm=document.createElement('span'); nm.className='nm'; nm.textContent=it.n; b.appendChild(nm);
@@ -303,13 +303,14 @@ function fillTray(elid, list){
   });
 }
 function drawThumb(c,type,opts){
-  c.clearRect(0,0,48,30); c.save(); c.translate(24,13);
+  c.clearRect(0,0,56,36); c.save(); c.translate(28,16);
   const base={type, size:1, color:undefined, num:''};
   if(type==='player'||type==='goalie') base.color=COLORS[playerColor];
   if(type==='player') base.num='7';
   if(activeColor && type!=='player' && type!=='goalie') base.color=activeColor;
   Object.assign(base, opts||{});
-  drawPieceShape(c, base, 1.0, true);
+  const thumbScale={net:3.2, bumper:2.2, tire:3.5, ring:3.5, zone:1.2}[type]||4.5;
+  drawPieceShape(c, base, thumbScale, true);
   c.restore();
 }
 
