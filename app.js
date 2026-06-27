@@ -97,6 +97,8 @@ let passBuilding=null;  // {path} click-based pass being built
 let passCursor=null;    // current mouse pos for live pass preview
 let shotBuilding=null;  // {path} click-based shot being built
 let shotCursor=null;    // current mouse pos for live shot preview
+let skateBuilding=null; // {anchors, path} click-based annotation skate being built
+let skateCursor=null;   // current mouse pos for live skate preview
 let sel=null;            // primary {kind:'piece'|'path', id}
 let selSet=[];           // full selection (one or many)
 let marquee=null;        // rubber-band box
@@ -591,7 +593,11 @@ function drawAnnotation(p){
   const col=p.color||'#0C2233';
   ctx.lineWidth=Math.max(2,0.55*cam.s); ctx.strokeStyle=col; ctx.fillStyle=col;
   ctx.lineJoin='round'; ctx.lineCap='round';
-  if(p.type==='skate'){ strokeWavy(scr); arrowHead(scr,col); }
+  if(p.type==='skate'){
+    const anc=p.anchors&&p.anchors.length>=2?p.anchors:p.pts;
+    const smooth=anc.length>=2?catmull(anc,16).map(q=>W2S(q.x,q.y)):scr;
+    strokePoly(smooth); arrowHead(smooth,col);
+  }
   else if(p.type==='pass'){ ctx.setLineDash([7,6]); strokePoly(scr); ctx.setLineDash([]); arrowHead(scr,col,true); }
   else if(p.type==='shot'){ shotDouble(scr,col); }
   else if(p.type==='arrow'){ strokePoly(scr); arrowHead(scr,col); }
@@ -819,6 +825,15 @@ function render(){
     ctx.save(); ctx.strokeStyle='#5BC2D6'; ctx.fillStyle='rgba(91,194,214,.12)'; ctx.lineWidth=1.5; ctx.setLineDash([6,4]);
     const rx=Math.min(a[0],b[0]),ry=Math.min(a[1],b[1]),rw=Math.abs(b[0]-a[0]),rh=Math.abs(b[1]-a[1]);
     ctx.fillRect(rx,ry,rw,rh); ctx.strokeRect(rx,ry,rw,rh); ctx.restore(); }
+  // live preview of skate being built
+  if(skateBuilding && skateCursor){
+    const anc=[...skateBuilding.path.anchors, skateCursor];
+    const smooth=anc.length>=2?catmull(anc,16):anc;
+    const scr2=smooth.map(q=>W2S(q.x,q.y));
+    ctx.save(); ctx.strokeStyle=activeColor||'#0C2233'; ctx.globalAlpha=0.5;
+    ctx.lineWidth=Math.max(2,0.55*cam.s); ctx.lineJoin='round'; ctx.lineCap='round';
+    strokePoly(scr2); ctx.restore();
+  }
   // live preview of pass being built
   if(passBuilding && passCursor){
     const pts=passBuilding.path.pts; const last=pts[pts.length-1];
@@ -937,6 +952,18 @@ cv.addEventListener('pointerdown',e=>{
     seg={raw:[{x:la.x,y:la.y}]};
     updateInspector(); render(); return;
   }
+  if(tool==='skate' && !building){
+    if(!skateBuilding){
+      pushUndo();
+      const np={id:id(),type:'skate',color:(activeColor||'#0C2233'),pts:[{x:wx,y:wy}],anchors:[{x:wx,y:wy}],owner:null,delay:0,dur:T,_lut:null};
+      paths.push(np); skateBuilding={path:np}; selOne('path',np.id);
+      toast('Click waypoints for a smooth curve — right-click or Enter to finish');
+    } else {
+      skateBuilding.path.anchors.push({x:wx,y:wy});
+      skateBuilding.path.pts=catmull(skateBuilding.path.anchors,16);
+    }
+    skateCursor={x:wx,y:wy}; updateInspector(); render(); return;
+  }
   if(tool==='pass'){
     if(!passBuilding){
       pushUndo();
@@ -978,6 +1005,7 @@ cv.addEventListener('pointermove',e=>{
   const [wx,wy]=S2W(e.offsetX,e.offsetY);
   if(rotDrag){ const p=rotDrag.piece; const [sx,sy]=W2S(p.x,p.y);
     p.rot=Math.atan2(e.offsetX-sx,sy-e.offsetY)*180/Math.PI; render(); return; }
+  if(skateBuilding){ skateCursor={x:wx,y:wy}; render(); return; }
   if(passBuilding){ passCursor={x:wx,y:wy}; render(); return; }
   if(shotBuilding){ shotCursor={x:wx,y:wy}; render(); return; }
   if(panStart){ cam.tx=panStart.tx+(e.offsetX-panStart.x); cam.ty=panStart.ty+(e.offsetY-panStart.y); render(); return; }
@@ -1025,6 +1053,12 @@ cv.addEventListener('pointerup',e=>{
 });
 cv.addEventListener('dblclick',e=>{
   if(building){ finishBuilding(); return; }
+  if(skateBuilding){
+    const anc=skateBuilding.path.anchors;
+    if(anc.length>1) anc.pop();
+    skateBuilding.path.pts=catmull(anc,16);
+    skateBuilding=null; skateCursor=null; selOne(null); updateInspector(); render(); return;
+  }
   if(passBuilding){
     const pts=passBuilding.path.pts;
     if(pts.length>1) pts.pop();
@@ -1041,6 +1075,7 @@ cv.addEventListener('dblclick',e=>{
 cv.addEventListener('contextmenu',e=>{
   e.preventDefault();
   if(pendingType){ pendingType=null; pendingOpts=null; pendingStamp=false; cv.style.cursor=''; updateHint(); render(); return; }
+  if(skateBuilding){ skateBuilding=null; skateCursor=null; selOne(null); updateInspector(); render(); return; }
   if(passBuilding){ passBuilding=null; passCursor=null; selOne(null); updateInspector(); render(); return; }
   if(shotBuilding){ shotBuilding=null; shotCursor=null; selOne(null); updateInspector(); render(); return; }
   if(building){ finishBuilding(); return; }
@@ -1263,6 +1298,7 @@ document.getElementById('scrubber').oninput=e=>{ playing=false; setPlayUI(); tNo
 window.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT')return;
   if(building && (e.key==='Enter'||e.key==='Escape')){ e.preventDefault(); finishBuilding(); return; }
+  if(skateBuilding && (e.key==='Enter'||e.key==='Escape')){ e.preventDefault(); skateBuilding=null; skateCursor=null; selOne(null); updateInspector(); render(); return; }
   if(passBuilding && (e.key==='Enter'||e.key==='Escape')){ e.preventDefault(); passBuilding=null; passCursor=null; selOne(null); updateInspector(); render(); return; }
   if(shotBuilding && (e.key==='Enter'||e.key==='Escape')){ e.preventDefault(); shotBuilding=null; shotCursor=null; selOne(null); updateInspector(); render(); return; }
   if(e.code==='Space'){ e.preventDefault(); togglePlay(); }
