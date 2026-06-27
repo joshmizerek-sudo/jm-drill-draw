@@ -151,9 +151,10 @@ function setTool(k){ if(building) finishBuilding(); tool=k; pendingType=null; pe
 
 function buildObjColors(){
   const el=document.getElementById('objcolors'); if(!el)return; el.innerHTML='';
-  const auto=document.createElement('div'); auto.className='sw'+(activeColor===null?' on':'');
-  auto.title="Auto: each object's own default colour";
-  auto.style.background='conic-gradient(#E8313A,#F2811D,#2FA866,#2F6FE0,#8A2BE2,#E8313A)'; auto.dataset.k='auto';
+  const auto=document.createElement('button');
+  auto.textContent='Default'; auto.dataset.k='auto';
+  auto.style.cssText='font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;border:2px solid '+(activeColor===null?'#fff':'#244A66')+';background:'+(activeColor===null?'#5BC2D6':'var(--panel)')+';color:'+(activeColor===null?'#04141c':'var(--muted)')+';cursor:pointer;white-space:nowrap;';
+  auto.title="Reset to each object's own default colour";
   auto.onclick=()=>pickObjColor(null,auto); el.appendChild(auto);
   [['black','#11181f'],['red','#E8313A'],['green','#2FA866'],['blue','#2F6FE0'],['orange','#F2811D'],['purple','#8A2BE2'],['white','#FFFFFF']]
     .forEach(([k,v])=>{ const d=document.createElement('div'); d.className='sw'; d.style.background=v; d.dataset.k=v;
@@ -168,6 +169,8 @@ function pickObjColor(v,el){
   } else {
     activeColor=v;
     document.querySelectorAll('#objcolors .sw').forEach(x=>x.classList.toggle('on',x===el));
+    const defBtn=document.querySelector('#objcolors [data-k="auto"]');
+    if(defBtn){ const on=v===null; defBtn.style.borderColor=on?'#fff':'#244A66'; defBtn.style.background=on?'#5BC2D6':'var(--panel)'; defBtn.style.color=on?'#04141c':'var(--muted)'; }
     fillTray('equip',EQUIP); fillTray('positions',POSITIONS);
   }
 }
