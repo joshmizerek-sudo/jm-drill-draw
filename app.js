@@ -297,7 +297,8 @@ function fillTray(elid, list){
     const c=document.createElement('canvas'); c.width=56;c.height=36;
     drawThumb(c.getContext('2d'), it.type, it.opts);
     b.appendChild(c);
-    const nm=document.createElement('span'); nm.className='nm'; nm.textContent=it.n; b.appendChild(nm);
+    const playerType=(it.type==='player'||it.type==='goalie'||it.type==='coach');
+    if(!playerType){ const nm=document.createElement('span'); nm.className='nm'; nm.textContent=it.n; b.appendChild(nm); }
     b.onclick=()=>armPlace(it.type, it.opts);
     g.appendChild(b);
   });

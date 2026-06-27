@@ -71,6 +71,7 @@
   .tool.on svg *{stroke:#04141c}
   .pieces{display:grid;grid-template-columns:1fr 1fr;gap:4px}
   .pieces.three-col{grid-template-columns:1fr 1fr 1fr}
+  .pieces.player-grid .piece{height:32px}
   .piece{background:var(--panel);border:1px solid var(--line);border-radius:6px;height:42px;
     display:grid;place-items:center;position:relative}
   .piece:hover{background:var(--panel2);border-color:var(--accentdk)}
