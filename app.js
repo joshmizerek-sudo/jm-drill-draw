@@ -773,7 +773,7 @@ function render(){
   const rotPc = selSet.length===1 && selSet[0].kind==='piece' ? getPiece(selSet[0].id) : null;
   if(rotPc && (rotPc.type==='net'||rotPc.type==='bumper')){
     const [sx,sy]=W2S(rotPc.x,rotPc.y);
-    const armLen=38, rad=(rotPc.rot||0)*Math.PI/180, hx=sx-Math.sin(rad)*armLen, hy=sy-Math.cos(rad)*armLen;
+    const armLen=38, rad=(rotPc.rot||0)*Math.PI/180, hx=sx+Math.sin(rad)*armLen, hy=sy-Math.cos(rad)*armLen;
     ctx.save();
     ctx.strokeStyle='#5BC2D6'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
     ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(hx,hy); ctx.stroke(); ctx.setLineDash([]);
@@ -861,7 +861,7 @@ cv.addEventListener('pointerdown',e=>{
   const rotPcDown = selSet.length===1 && selSet[0].kind==='piece' ? getPiece(selSet[0].id) : null;
   if(rotPcDown && (rotPcDown.type==='net'||rotPcDown.type==='bumper')){
     const [sx,sy]=W2S(rotPcDown.x,rotPcDown.y);
-    const armLen=38, rad2=(rotPcDown.rot||0)*Math.PI/180, hx=sx-Math.sin(rad2)*armLen, hy=sy-Math.cos(rad2)*armLen;
+    const armLen=38, rad2=(rotPcDown.rot||0)*Math.PI/180, hx=sx+Math.sin(rad2)*armLen, hy=sy-Math.cos(rad2)*armLen;
     if(Math.hypot(e.offsetX-hx,e.offsetY-hy)<12){ pushUndo(); rotDrag={piece:rotPcDown}; return; }
   }
   if(pendingPick){ resolvePick(wx,wy); return; }
