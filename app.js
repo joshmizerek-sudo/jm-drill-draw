@@ -920,7 +920,11 @@ cv.addEventListener('dblclick',e=>{
   const [wx,wy]=S2W(e.offsetX,e.offsetY); const pc=pieceAt(wx,wy);
   if(pc && pc.type==='text'){ const s=window.prompt('Edit text:', pc.text||''); if(s!==null){ pushUndo(); pc.text=s.trim(); render(); } }
 });
-cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('contextmenu',e=>{
+  e.preventDefault();
+  if(passBuilding){ passBuilding=null; passCursor=null; selOne(null); updateInspector(); render(); return; }
+  if(building){ finishBuilding(); return; }
+});
 cv.addEventListener('wheel',e=>{ e.preventDefault();
   const f=e.deltaY<0?1.12:1/1.12; const mx=e.offsetX,my=e.offsetY;
   const [wx,wy]=S2W(mx,my); cam.s*=f; cam.tx=mx-wx*cam.s; cam.ty=my-wy*cam.s; render();
