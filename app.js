@@ -269,6 +269,7 @@ const EQUIP=[
   {type:'bumper',   n:'Bumper'},
   {type:'ring',     n:'Ring'},
   {type:'dot',      n:'Dot'},
+  {type:'zone',     n:'Zone'},
 ];
 const POSITIONS=[
   {type:'player',n:'F', opts:{num:'F'}},
@@ -374,7 +375,7 @@ function addPiece(type, at, opts){
   selOne('piece',piece.id); updateInspector(); render(); toast(prettyType(piece.type)+' added');
 }
 function nextNum(){ const used=pieces.filter(p=>p.type==='player'&&p.color===COLORS[playerColor]).length; return used+1; }
-function prettyType(t){ return ({player:'Skater',goalie:'Goalie',coach:'Coach',puck:'Puck',puckstack:'Pucks',net:'Net',cone:'Cone',tire:'Tire',bumper:'Bumper',ring:'Ring',dot:'Dot',image:'Image',text:'Text'})[t]||t; }
+function prettyType(t){ return ({player:'Skater',goalie:'Goalie',coach:'Coach',puck:'Puck',puckstack:'Pucks',net:'Net',cone:'Cone',tire:'Tire',bumper:'Bumper',ring:'Ring',dot:'Dot',zone:'Zone',image:'Image',text:'Text'})[t]||t; }
 function defColor(t){ return ({cone:'#F2811D',net:'#D11C2C',bumper:'#E7B416',dot:'#D11C2C',tire:'#E7B416',puck:'#111418',puckstack:'#111418',ring:'#222831',coach:'#E7B416'})[t]||'#11181f'; }
 function isDark(hex){ if(!hex)return true; const c=(hex+'').replace('#',''); const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16); return (0.299*r+0.587*g+0.114*b)<140; }
 function escapeHtml(s){ return (s||'').replace(/[&<>"\']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
@@ -492,7 +493,7 @@ function drawPiece(p, pos){
   }
 }
 function pieceRadius(p){ // in feet
-  const b={player:2.6,goalie:3.0,coach:2.6,puck:1.0,puckstack:2.0,net:3.4,cone:1.6,tire:2.0,bumper:7,ring:2.2,dot:1.2,image:8}[p.type]||2;
+  const b={player:2.6,goalie:3.0,coach:2.6,puck:1.0,puckstack:2.0,net:3.4,cone:1.6,tire:2.0,bumper:7,ring:2.2,dot:1.2,image:8,zone:10}[p.type]||2;
   return b*(p.size||1);
 }
 function drawPieceShape(c, p, scale, thumb){
@@ -568,6 +569,14 @@ function drawPieceShape(c, p, scale, thumb){
     case 'ring':{
       const r=2.2*z*size; c.strokeStyle=p.color||'#222831'; c.lineWidth=Math.max(2,r*0.28);
       c.beginPath(); c.arc(0,0,r,0,7); c.stroke(); break; }
+    case 'zone':{
+      // highlighted area circle — size maps to radius in feet (default ~10ft)
+      const r=(thumb?12:10*cam.s)*size;
+      const col=p.color||'#5BC2D6';
+      c.fillStyle=col; c.globalAlpha=0.15; c.beginPath(); c.arc(0,0,r,0,7); c.fill();
+      c.globalAlpha=1; c.strokeStyle=col; c.lineWidth=Math.max(2,0.5*(thumb?1:cam.s));
+      c.setLineDash([Math.max(5,0.8*(thumb?1:cam.s)),Math.max(4,0.6*(thumb?1:cam.s))]);
+      c.beginPath(); c.arc(0,0,r,0,7); c.stroke(); c.setLineDash([]); break; }
     case 'puckstack':{
       const r=0.72*z*size; c.fillStyle=p.color||'#111';
       [[-1,-1],[1,-1],[0,0],[-1,1],[1,1]].forEach(([ox,oy])=>{ c.beginPath(); c.ellipse(ox*r*1.15,oy*r*1.15,r,r*0.62,0,0,7); c.fill(); });
@@ -872,13 +881,15 @@ function stagger(){
 function render(){
   clear();
   panels().forEach(p=>drawRinkBg(p));
+  // zones under everything
+  pieces.filter(p=>p.type==='zone').forEach(p=>drawPiece(p,{}));
   // paths under pieces
   paths.forEach(p=>drawPath(p));
   // pieces (animated positions if mid-play or scrubbed)
   const showAnim = playing || tNow>0;
   const map = showAnim? animatedPositions() : {};
   pieces.forEach(p=>{ if(p.type==='puck'&&p.legs&&p.legs.length) drawPuckJourney(p); });
-  pieces.forEach(p=>drawPiece(p, map[p.id]));
+  pieces.filter(p=>p.type!=='zone').forEach(p=>drawPiece(p, map[p.id]));
   // rotation handle for selected net
   const rotPc = selSet.length===1 && selSet[0].kind==='piece' ? getPiece(selSet[0].id) : null;
   if(rotPc && (rotPc.type==='net'||rotPc.type==='bumper')){
@@ -1195,7 +1206,7 @@ function updateInspector(){
     } else if(p.type!=='image'){
       h+=field('Colour', colorBtns(p.color||defColor(p.type)));
     }
-    const szMax=p.type==='image'?30:p.type==='text'?6:2.4, szMin=p.type==='image'?1:p.type==='text'?0.4:0.5;
+    const szMax=p.type==='image'?30:p.type==='text'?6:p.type==='zone'?5:2.4, szMin=p.type==='image'?1:p.type==='text'?0.4:p.type==='zone'?0.2:0.5;
     h+=field('Size','<input type="range" id="f_size" min="'+szMin+'" max="'+szMax+'" step="0.05" value="'+(p.size||1)+'">');
     if(p.type==='image'){
       h+=field('Opacity','<input type="range" id="f_op" min="0.15" max="1" step="0.05" value="'+(p.opacity!=null?p.opacity:1)+'">');
