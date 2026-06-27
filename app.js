@@ -337,9 +337,25 @@ function drawRinkBg(p){
   const nzdot=(fx,fy)=>{ ctx.fillStyle=red; ctx.beginPath(); ctx.arc(X(fx),Y(fy),0.95*s,0,7); ctx.fill(); };
   const crease=(gx,dir)=>{ ctx.fillStyle='rgba(120,180,235,.18)'; ctx.strokeStyle=red; ctx.lineWidth=thin;
     ctx.beginPath(); ctx.arc(X(gx),Y(42.5),6*s, dir>0?-Math.PI/2:Math.PI/2, dir>0?Math.PI/2:3*Math.PI/2, false); ctx.closePath(); ctx.fill(); ctx.stroke(); };
-  const netbox=(gx,dir)=>{ const d=3.4*s, w=6*s; const x0=Math.min(X(gx),X(gx)-dir*d), y0=Y(42.5)-w/2;
-    ctx.fillStyle=greyfill; ctx.strokeStyle=red; ctx.lineWidth=thin;
-    roundRectPath(x0,y0,d,w,1.4*s); ctx.fill(); ctx.stroke(); };
+  const netbox=(gx,dir)=>{ const d=3.4*s, w=6*s, r=0.9*s;
+    const x0=X(gx), y0=Y(42.5)-w/2, x1=x0+dir*d;
+    const L=Math.min(x0,x1), R=Math.max(x0,x1), T=y0, B=y0+w;
+    ctx.fillStyle=greyfill; ctx.strokeStyle=red;
+    // filled body
+    ctx.beginPath();
+    ctx.moveTo(L,T); ctx.lineTo(R,T);
+    if(dir>0){ ctx.lineTo(R,B-r); ctx.quadraticCurveTo(R,B,R-r,B); ctx.lineTo(L+r,B); ctx.quadraticCurveTo(L,B,L,B-r); }
+    else      { ctx.lineTo(R-r,B); ctx.quadraticCurveTo(R,B,R,B-r); ctx.lineTo(L,B-r); ctx.quadraticCurveTo(L,B,L+r,B); }
+    ctx.closePath(); ctx.fill();
+    // goal line — thick
+    ctx.lineWidth=thin*2; ctx.beginPath(); ctx.moveTo(x0,T); ctx.lineTo(x0,B); ctx.stroke();
+    // posts + back
+    ctx.lineWidth=thin;
+    ctx.beginPath();
+    ctx.moveTo(x0,T); ctx.lineTo(dir>0?R:L,T);
+    if(dir>0){ ctx.lineTo(R,B-r); ctx.quadraticCurveTo(R,B,R-r,B); ctx.lineTo(L+r,B); ctx.quadraticCurveTo(L,B,L,B-r); }
+    else      { ctx.lineTo(R-r,B); ctx.quadraticCurveTo(R,B,R,B-r); ctx.lineTo(L,B-r); ctx.quadraticCurveTo(L,B,L+r,B); }
+    ctx.lineTo(x0,B); ctx.stroke(); };
   const trapezoid=(gx,boardx)=>{ if(!showTrap)return; ctx.strokeStyle=red; ctx.lineWidth=thin;
     ctx.beginPath(); ctx.moveTo(X(gx),Y(42.5-11)); ctx.lineTo(X(boardx),Y(42.5-14)); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(X(gx),Y(42.5+11)); ctx.lineTo(X(boardx),Y(42.5+14)); ctx.stroke(); };
