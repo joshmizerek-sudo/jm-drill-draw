@@ -87,7 +87,6 @@ let uid=1;
 const id=()=>uid++;
 
 let tool='select';
-let drillMode='animate'; // 'animate' | 'draw'
 let pendingType=null, pendingOpts=null;   // piece (and template) armed to drop at next click
 let pendingPick=null;   // {puckId, kind} — waiting for a carrier/receiver click
 let activeColor=null;   // null = each object's own default; otherwise applies to new objects + lines
@@ -121,54 +120,29 @@ function redo(){ if(!redoStack.length)return; undoStack.push(snapshot()); restor
 // =========================================================
 //  TRAY
 // =========================================================
-// utility tools shown in the Tools panel
-const UTIL_TOOLS=[
+const TOOLS=[
   {k:'select', n:'Select', svg:'<path d="M5 3l14 7-6 2-2 6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>'},
+  {k:'motion', n:'Move',   svg:'<circle cx="5" cy="18" r="2.5" fill="var(--accent)"/><path d="M6 16q3-9 9-9" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="2 2"/><path d="M12 4l5 3-5 3" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'},
+  {k:'skate',  n:'Skate',  svg:'<path d="M3 16q3-6 5 0t5 0 5 0" fill="none" stroke="var(--accent)" stroke-width="2"/><path d="M19 13l3 3-3 3" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'},
+  {k:'pass',   n:'Pass',   svg:'<path d="M3 12h14" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="3 3"/><path d="M16 8l5 4-5 4" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'},
+  {k:'shot',   n:'Shot',   svg:'<path d="M3 12h14M7 8v8M10 8v8" fill="none" stroke="var(--accent)" stroke-width="2"/><path d="M16 8l5 4-5 4" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'},
+  {k:'arrow',  n:'Arrow',  svg:'<path d="M3 12h14" fill="none" stroke="var(--accent)" stroke-width="2"/><path d="M16 8l5 4-5 4" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'},
+  {k:'pen',    n:'Pen',    svg:'<path d="M4 20l3-1L19 7l-2-2L5 17z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>'},
+  {k:'text',   n:'Text',   svg:'<path d="M5 5h14M12 5v14M9 19h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'},
+  {k:'pan',    n:'Pan',    svg:'<path d="M12 3v8M8 7l4-4 4 4M5 12h14M9 16l3 4 3-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'},
   {k:'erase',  n:'Erase',  svg:'<path d="M6 18l-3-3 9-9 6 6-6 6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 21h11" stroke="currentColor" stroke-width="2"/>'},
-  {k:'_undo',  n:'Undo',   svg:'<path d="M3 10h10a7 7 0 0 1 0 14H6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 10l4-4M3 10l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'},
-  {k:'_redo',  n:'Redo',   svg:'<path d="M21 10H11a7 7 0 0 0 0 14h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 10l-4-4M21 10l-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'},
-];
-// drawing tools shown in the Move / Style panel
-const LINE_STYLES=[
-  {k:'skate',  n:'Skate',  svg:'<path d="M2 14 Q8 6 16 10 Q22 13 30 8" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M27 5l5 3-3 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'},
-  {k:'pass',   n:'Pass',   svg:'<path d="M2 9h28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-dasharray="5 4" stroke-linecap="round"/><path d="M27 5l5 4-5 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'},
-  {k:'motion', n:'Route',  svg:'<circle cx="4" cy="14" r="3" fill="currentColor"/><path d="M6 13 Q14 5 28 9" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M25 5l5 4-5 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'},
-  {k:'shot',   n:'Shot',   svg:'<path d="M2 9h22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M8 5v8M13 5v8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M22 5l6 4-6 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'},
-  {k:'arrow',  n:'Arrow',  svg:'<path d="M2 9h26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M25 5l5 4-5 4" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>'},
-  {k:'pen',    n:'Pen',    svg:'<path d="M3 17l3-1L18 4l-2-2L4 15z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M16 2l2 2" stroke="currentColor" stroke-width="2"/>'},
 ];
 function buildTools(){
-  const g=document.getElementById('tools'); if(!g) return; g.innerHTML='';
-  UTIL_TOOLS.forEach(t=>{
-    const b=document.createElement('button');
-    b.className='tool'+(tool===t.k?' on':'');
-    b.dataset.k=t.k;
-    b.innerHTML=`<svg viewBox="0 0 24 24">${t.svg}</svg><span>${t.n}</span>`;
-    b.onclick=()=>{
-      if(t.k==='_undo'){ undo(); return; }
-      if(t.k==='_redo'){ redo(); return; }
-      setTool(t.k);
-    };
+  const g=document.getElementById('tools'); g.innerHTML='';
+  TOOLS.forEach(t=>{
+    const b=document.createElement('button'); b.className='tool'+(tool===t.k?' on':'');
+    b.dataset.k=t.k; b.innerHTML=`<svg viewBox="0 0 24 24">${t.svg}</svg>${t.n}`;
+    b.onclick=()=>setTool(t.k);
     g.appendChild(b);
   });
-}
-function buildLineStyles(){
-  const g=document.getElementById('lineStyles'); if(!g) return; g.innerHTML='';
-  LINE_STYLES.forEach(s=>{
-    const b=document.createElement('button');
-    b.className='style-btn'+(tool===s.k?' on':'');
-    b.dataset.k=s.k;
-    b.innerHTML=`<svg viewBox="0 0 32 18">${s.svg}</svg>${s.n}`;
-    b.onclick=()=>setTool(s.k);
-    g.appendChild(b);
-  });
-}
-function refreshToolHighlights(){
-  document.querySelectorAll('#tools .tool').forEach(b=>b.classList.toggle('on', b.dataset.k===tool));
-  document.querySelectorAll('#lineStyles .style-btn').forEach(b=>b.classList.toggle('on', b.dataset.k===tool));
 }
 function setTool(k){ if(building) finishBuilding(); tool=k; pendingType=null; pendingOpts=null; pendingStamp=false;
-  refreshToolHighlights();
+  [...document.querySelectorAll('#tools .tool')].forEach(b=>b.classList.toggle('on',b.dataset.k===k));
   cv.className = (k==='select'?'select':k==='pan'?'pan':''); cv.style.cursor=''; updateHint(); }
 
 function buildObjColors(){
@@ -562,23 +536,27 @@ function drawMotionPath(p){
     strokePoly(scr); ctx.setLineDash([]);
     arrowHead(scr,col); ctx.restore();
     if(pc){ ctx.save(); ctx.globalAlpha=0.45; drawPieceGhost(pc,p.pts[p.pts.length-1]); ctx.restore(); }
+    if(seld && p.anchors){ p.anchors.forEach(aa=>{ const [hx,hy]=W2S(aa.x,aa.y);
+      ctx.fillStyle='#fff'; ctx.strokeStyle=col; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(hx,hy,Math.max(5,1.2*cam.s),0,7); ctx.fill(); ctx.stroke(); }); }
     return;
   }
 
   ctx.save(); ctx.lineJoin='round'; ctx.lineCap='round';
-  // subtle lane behind the path
+  // travel lane
   const laneW=Math.max(9,(pc?pieceRadius(pc)*1.9:5)*cam.s);
-  ctx.strokeStyle=col; ctx.globalAlpha=seld?0.22:0.12; ctx.lineWidth=laneW; strokePoly(scr);
-  // solid centre line
+  ctx.strokeStyle=col; ctx.globalAlpha=seld?0.22:0.14; ctx.lineWidth=laneW; strokePoly(scr);
+  // solid centre line (smooth curve)
   ctx.globalAlpha=1; ctx.lineWidth=Math.max(2.5,0.65*cam.s); ctx.strokeStyle=col; strokePoly(scr);
   arrowHead(scr,col); ctx.restore();
   // ghost piece at destination
-  if(pc){ ctx.save(); ctx.globalAlpha=0.38; drawPieceGhost(pc,p.pts[p.pts.length-1]); ctx.restore(); }
+  if(pc){ ctx.save(); ctx.globalAlpha=0.42; drawPieceGhost(pc,p.pts[p.pts.length-1]); ctx.restore(); }
   // start badge
   const [bx,by]=scr[0], br=Math.max(6,1.5*cam.s);
   ctx.fillStyle=col; ctx.beginPath(); ctx.arc(bx,by,br,0,7); ctx.fill();
-  ctx.fillStyle='#fff'; ctx.font=`700 ${Math.max(9,1.9*cam.s)}px Inter`;
-  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('▶',bx+0.5,by);
+  ctx.fillStyle='#fff'; ctx.font=`700 ${Math.max(9,1.9*cam.s)}px Inter`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('▶',bx+0.5,by);
+  // reshape handles when selected
+  if(seld && p.anchors){ p.anchors.forEach((aa,i)=>{ const [hx,hy]=W2S(aa.x,aa.y);
+    ctx.fillStyle='#fff'; ctx.strokeStyle=col; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(hx,hy,Math.max(5,1.2*cam.s),0,7); ctx.fill(); ctx.stroke(); }); }
 }
 function drawAnnotation(p){
   if(p.pts.length<2) return;
@@ -864,27 +842,20 @@ cv.addEventListener('pointerdown',e=>{
     updateInspector(); render(); return;
   }
   if(tool==='skate'){
-    if(drillMode==='draw'){
-      // 2D Draw mode: static annotation line (freehand)
-      pushUndo();
-      drawing={id:id(),type:'skate',color:(activeColor||'#0C2233'),pts:[{x:wx,y:wy}],owner:null,delay:0,dur:T,_lut:null};
-      return;
-    }
-    // Animate mode: click-based motion path
     if(!building){
       pushUndo();
       const ep=motionEndpointAt(wx,wy);
       if(ep){ building={path:ep}; selOne('path',ep.id); }
       else {
         const pc=pieceAt(wx,wy)||nearestPiece(wx,wy,4);
-        if(!pc){ toast('Click a skater to start their skating path'); return; }
+        if(!pc){ toast('Click a skater to start their path'); return; }
         const existing=motionPathOf(pc.id);
         if(existing){ building={path:existing}; selOne('path',existing.id); toast('Extending route — click to add points, double-click to finish'); }
         else {
           const np={id:id(),motion:true,owner:pc.id,color:(pc.color||'#0C2233'),
             anchors:[{x:pc.x,y:pc.y}],pts:[{x:pc.x,y:pc.y}],delay:0,dur:T,_lut:null};
           paths.push(np); building={path:np}; selOne('path',np.id);
-          toast('Click waypoints — double-click or Enter to finish');
+          toast('Click to add waypoints — double-click or Enter to finish');
         }
       }
     }
@@ -893,13 +864,6 @@ cv.addEventListener('pointerdown',e=>{
     updateInspector(); render(); return;
   }
   if(tool==='pass'){
-    if(drillMode==='draw'){
-      // 2D Draw mode: static dashed annotation
-      pushUndo();
-      drawing={id:id(),type:'pass',color:(activeColor||'#0C2233'),pts:[{x:wx,y:wy}],owner:null,delay:0,dur:T,_lut:null};
-      return;
-    }
-    // Animate mode: animated puck path
     if(!building){
       pushUndo();
       const pc=pieceAt(wx,wy)||nearestPiece(wx,wy,6);
@@ -914,7 +878,7 @@ cv.addEventListener('pointerdown',e=>{
       const np={id:id(),motion:true,owner:puck.id,color:'#0C2233',
         anchors:[{x:puck.x,y:puck.y}],pts:[{x:puck.x,y:puck.y}],delay:0,dur:T,_lut:null,isPass:true};
       paths.push(np); building={path:np}; selOne('path',np.id);
-      toast('Click waypoints for the puck — double-click or Enter to finish');
+      toast('Click to route the puck — double-click or Enter to finish');
     }
     const la=building.path.anchors[building.path.anchors.length-1];
     seg={raw:[{x:la.x,y:la.y}]};
@@ -1270,110 +1234,13 @@ function loadDemo(){
 document.getElementById('demoBtn').onclick=loadDemo;
 
 // =========================================================
-//  COLLAPSIBLE SECTIONS
-// =========================================================
-document.querySelectorAll('.tsec-hdr').forEach(hdr=>{
-  hdr.addEventListener('click',()=>{
-    hdr.parentElement.classList.toggle('open');
-  });
-});
-
-// =========================================================
-//  MODE TOGGLE (Animate / 2D Draw)
-// =========================================================
-document.getElementById('modeAnimate').onclick=()=>setDrillMode('animate');
-document.getElementById('modeDraw').onclick   =()=>setDrillMode('draw');
-function setDrillMode(m){
-  drillMode=m;
-  document.getElementById('modeAnimate').classList.toggle('on', m==='animate');
-  document.getElementById('modeDraw').classList.toggle('on',    m==='draw');
-  toast(m==='animate'? 'Animate mode — Skate & Pass paths move on Play'
-                     : '2D Draw mode — all paths are static diagram lines');
-}
-
-// =========================================================
-//  DRILL LIBRARY (localStorage)
-// =========================================================
-const LIB_KEY='jm_drill_library';
-function getLibrary(){ try{ return JSON.parse(localStorage.getItem(LIB_KEY)||'[]'); }catch(e){ return []; } }
-function saveLibrary(lib){ localStorage.setItem(LIB_KEY, JSON.stringify(lib)); }
-
-function openLibraryModal(){
-  renderLibrary();
-  document.getElementById('libraryModal').classList.add('show');
-}
-function renderLibrary(){
-  const lib=getLibrary();
-  const list=document.getElementById('libList');
-  const empty=document.getElementById('libEmpty');
-  if(!lib.length){ empty.style.display='block'; list.innerHTML=''; return; }
-  empty.style.display='none';
-  list.innerHTML='';
-  lib.forEach(entry=>{
-    const item=document.createElement('div'); item.className='lib-item';
-    item.innerHTML=`
-      <div class="lib-item-info">
-        <div class="lib-item-name">${escapeHtml(entry.name)}</div>
-        <div class="lib-item-date">${entry.date}</div>
-      </div>
-      <div class="lib-item-actions">
-        <button class="tbtn" data-open="${entry.id}">Open</button>
-        <button class="tbtn ghost" data-dl="${entry.id}" title="Download as file">⬇</button>
-        <button class="del" style="margin:0;padding:5px 10px;font-size:11px" data-del="${entry.id}">✕</button>
-      </div>`;
-    list.appendChild(item);
-  });
-  list.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{
-    const e=getLibrary().find(x=>x.id===+b.dataset.open); if(!e) return;
-    loadData(JSON.parse(e.data)); document.getElementById('libraryModal').classList.remove('show');
-    toast('Loaded: '+e.name);
-  });
-  list.querySelectorAll('[data-dl]').forEach(b=>b.onclick=()=>{
-    const e=getLibrary().find(x=>x.id===+b.dataset.dl); if(!e) return;
-    const blob=new Blob([e.data],{type:'application/json'});
-    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-    a.download=e.name.replace(/[^a-z0-9]/gi,'-').toLowerCase()+'.json'; a.click();
-  });
-  list.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
-    if(!confirm('Delete "'+getLibrary().find(x=>x.id===+b.dataset.del)?.name+'"?')) return;
-    saveLibrary(getLibrary().filter(x=>x.id!==+b.dataset.del));
-    renderLibrary();
-  });
-}
-
-function promptSaveDrill(){
-  const modal=document.getElementById('saveModal');
-  const input=document.getElementById('drillNameInput');
-  input.value=''; modal.classList.add('show');
-  setTimeout(()=>input.focus(),80);
-}
-function confirmSave(){
-  const name=document.getElementById('drillNameInput').value.trim();
-  if(!name){ document.getElementById('drillNameInput').focus(); return; }
-  const lib=getLibrary();
-  lib.unshift({id:Date.now(), name, date:new Date().toLocaleDateString(), data:snapshot()});
-  saveLibrary(lib);
-  document.getElementById('saveModal').classList.remove('show');
-  toast('Saved: '+name);
-}
-
-document.getElementById('libraryBtn').onclick=openLibraryModal;
-document.getElementById('libSaveBtn').onclick=promptSaveDrill;
-document.getElementById('libClose').onclick=()=>document.getElementById('libraryModal').classList.remove('show');
-document.getElementById('libraryModal').onclick=e=>{ if(e.target.id==='libraryModal') e.currentTarget.classList.remove('show'); };
-document.getElementById('saveConfirm').onclick=confirmSave;
-document.getElementById('saveCancel').onclick=()=>document.getElementById('saveModal').classList.remove('show');
-document.getElementById('saveModal').onclick=e=>{ if(e.target.id==='saveModal') e.currentTarget.classList.remove('show'); };
-document.getElementById('drillNameInput').addEventListener('keydown',e=>{ if(e.key==='Enter') confirmSave(); });
-
-// =========================================================
 //  BOOT
 // =========================================================
 function resize(){ DPR=Math.min(window.devicePixelRatio||1,2);
   cv.width=cv.clientWidth*DPR; cv.height=cv.clientHeight*DPR; render(); }
 window.addEventListener('resize',resize);
 
-buildTools(); buildLineStyles(); buildSwatches(); buildObjColors(); buildPieceTray(); buildLayoutSeg(); buildViewSeg();
+buildTools(); buildSwatches(); buildObjColors(); buildPieceTray(); buildLayoutSeg(); buildViewSeg();
 setTool('select');
 fitRect({x:0,y:0,w:RW,h:RH});
 resize();
