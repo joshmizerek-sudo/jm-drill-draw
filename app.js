@@ -108,7 +108,7 @@ function loadScene(idx){
   undoStack=s.undoStack; redoStack=s.redoStack;
   rinkConfig=s.rinkType||'full';
   document.getElementById('rinkSel').value=rinkConfig;
-  selOne(null); building=null; passBuilding=null; shotBuilding=null; skateBuilding=null;
+  selOne(null); building=null; passBuilding=null; shotBuilding=null; skateBuilding=null; skateBackBuilding=null; skateBackCursor=null;
   tNow=0; playing=false;
   try{setPlayUI();}catch(e){}
   currentView=defaultView(); buildLayoutSeg(); buildViewSeg();
@@ -165,8 +165,10 @@ let passBuilding=null;  // {path} click-based pass being built
 let passCursor=null;    // current mouse pos for live pass preview
 let shotBuilding=null;  // {path} click-based shot being built
 let shotCursor=null;    // current mouse pos for live shot preview
-let skateBuilding=null; // {anchors, path} click-based annotation skate being built
-let skateCursor=null;   // current mouse pos for live skate preview
+let skateBuilding=null;     // {anchors, path} click-based annotation skate being built
+let skateCursor=null;       // current mouse pos for live skate preview
+let skateBackBuilding=null; // same for backwards skate
+let skateBackCursor=null;
 let sel=null;            // primary {kind:'piece'|'path', id}
 let selSet=[];           // full selection (one or many)
 let marquee=null;        // rubber-band box
@@ -200,6 +202,7 @@ const TOOLS=[
   {k:'select', n:'Select', svg:'<path d="M5 3l14 7-6 2-2 6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>'},
   {k:'motion', n:'Move',   svg:'<circle cx="5" cy="18" r="2.5" fill="var(--accent)"/><path d="M6 16q3-9 9-9" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="2 2"/><path d="M12 4l5 3-5 3" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'},
   {k:'skate',  n:'Skate',  svg:'<path d="M3 16q3-6 5 0t5 0 5 0" fill="none" stroke="var(--accent)" stroke-width="2"/><path d="M19 13l3 3-3 3" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'},
+  {k:'skateback', n:'Back',  svg:'<path d="M3 16q1.5-3 2.5 0t2.5 0 2.5 0 2.5 0 2.5 0" fill="none" stroke="var(--accent)" stroke-width="2"/><path d="M19 13l3 3-3 3" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'},
   {k:'pass',   n:'Pass',   svg:'<path d="M3 12h14" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="3 3"/><path d="M16 8l5 4-5 4" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'},
   {k:'shot',   n:'Shot',   svg:'<path d="M3 12h14M7 8v8M10 8v8" fill="none" stroke="var(--accent)" stroke-width="2"/><path d="M16 8l5 4-5 4" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'},
   {k:'arrow',  n:'Arrow',  svg:'<path d="M3 12h14" fill="none" stroke="var(--accent)" stroke-width="2"/><path d="M16 8l5 4-5 4" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'},
@@ -678,6 +681,23 @@ function drawAnnotation(p){
     const smooth=anc.length>=2?catmull(anc,16).map(q=>W2S(q.x,q.y)):scr;
     strokePoly(smooth); arrowHead(smooth,col);
   }
+  else if(p.type==='skateback'){
+    const anc=p.anchors&&p.anchors.length>=2?p.anchors:p.pts;
+    const smooth=anc.length>=2?catmull(anc,24).map(q=>W2S(q.x,q.y)):scr;
+    // build wavy path: offset perpendicular with sine wave
+    const amp=Math.max(5,3.5*cam.s), freq=0.18;
+    const wavy=smooth.map((pt,i)=>{
+      if(i===0||i===smooth.length-1) return pt;
+      const prev=smooth[i-1], next=smooth[i+1];
+      const dx=next[0]-prev[0], dy=next[1]-prev[1];
+      const len=Math.hypot(dx,dy)||1;
+      const nx=-dy/len, ny=dx/len; // perpendicular
+      const t=i*freq;
+      const off=Math.sin(t*Math.PI*2)*amp;
+      return [pt[0]+nx*off, pt[1]+ny*off];
+    });
+    strokePoly(wavy); arrowHead(smooth,col);
+  }
   else if(p.type==='pass'){ ctx.setLineDash([7,6]); strokePoly(scr); ctx.setLineDash([]); arrowHead(scr,col,true); }
   else if(p.type==='shot'){ shotDouble(scr,col); }
   else if(p.type==='arrow'){ strokePoly(scr); arrowHead(scr,col); }
@@ -928,6 +948,23 @@ function render(){
     ctx.lineWidth=Math.max(2,0.55*cam.s); ctx.lineJoin='round'; ctx.lineCap='round';
     strokePoly(scr2); ctx.restore();
   }
+  // live preview of backwards skate being built
+  if(skateBackBuilding && skateBackCursor){
+    const anc=[...skateBackBuilding.path.anchors, skateBackCursor];
+    const smooth=anc.length>=2?catmull(anc,24):anc;
+    const scr2=smooth.map(q=>W2S(q.x,q.y));
+    const amp=Math.max(5,3.5*cam.s), freq=0.18;
+    const wavy=scr2.map((pt,i)=>{
+      if(i===0||i===scr2.length-1) return pt;
+      const prev=scr2[i-1], next=scr2[i+1];
+      const dx=next[0]-prev[0], dy=next[1]-prev[1]; const len=Math.hypot(dx,dy)||1;
+      const nx=-dy/len, ny=dx/len;
+      return [pt[0]+nx*Math.sin(i*freq*Math.PI*2)*amp, pt[1]+ny*Math.sin(i*freq*Math.PI*2)*amp];
+    });
+    ctx.save(); ctx.strokeStyle=activeColor||'#0C2233'; ctx.globalAlpha=0.5;
+    ctx.lineWidth=Math.max(2,0.55*cam.s); ctx.lineJoin='round'; ctx.lineCap='round';
+    strokePoly(wavy); ctx.restore();
+  }
   // live preview of pass being built
   if(passBuilding && passCursor){
     const pts=passBuilding.path.pts; const last=pts[pts.length-1];
@@ -1064,6 +1101,18 @@ cv.addEventListener('pointerdown',e=>{
     }
     skateCursor={x:wx,y:wy}; updateInspector(); render(); return;
   }
+  if(tool==='skateback' && !building){
+    if(!skateBackBuilding){
+      pushUndo();
+      const np={id:id(),type:'skateback',color:(activeColor||'#0C2233'),pts:[{x:wx,y:wy}],anchors:[{x:wx,y:wy}],owner:null,delay:0,dur:T,_lut:null};
+      paths.push(np); skateBackBuilding={path:np}; selOne('path',np.id);
+      toast('Click waypoints for backwards skating — right-click to finish');
+    } else {
+      skateBackBuilding.path.anchors.push({x:wx,y:wy});
+      skateBackBuilding.path.pts=catmull(skateBackBuilding.path.anchors,16);
+    }
+    skateBackCursor={x:wx,y:wy}; updateInspector(); render(); return;
+  }
   if(tool==='pass'){
     if(!passBuilding){
       pushUndo();
@@ -1109,6 +1158,7 @@ cv.addEventListener('pointermove',e=>{
   if(rotDrag){ const p=rotDrag.piece; const [sx,sy]=W2S(p.x,p.y);
     p.rot=Math.atan2(e.offsetX-sx,sy-e.offsetY)*180/Math.PI; render(); return; }
   if(skateBuilding){ skateCursor={x:wx,y:wy}; render(); return; }
+  if(skateBackBuilding){ skateBackCursor={x:wx,y:wy}; render(); return; }
   if(passBuilding){ passCursor={x:wx,y:wy}; render(); return; }
   if(shotBuilding){ shotCursor={x:wx,y:wy}; render(); return; }
   if(panStart){ cam.tx=panStart.tx+(e.offsetX-panStart.x); cam.ty=panStart.ty+(e.offsetY-panStart.y); render(); return; }
@@ -1179,6 +1229,7 @@ cv.addEventListener('dblclick',e=>{
 cv.addEventListener('contextmenu',e=>{
   e.preventDefault();
   if(pendingType){ pendingType=null; pendingOpts=null; pendingStamp=false; cv.style.cursor=''; updateHint(); render(); return; }
+  if(skateBackBuilding){ skateBackBuilding=null; skateBackCursor=null; selOne(null); updateInspector(); render(); return; }
   if(skateBuilding){ skateBuilding=null; skateCursor=null; selOne(null); updateInspector(); render(); return; }
   if(passBuilding){ passBuilding=null; passCursor=null; selOne(null); updateInspector(); render(); return; }
   if(shotBuilding){ shotBuilding=null; shotCursor=null; selOne(null); updateInspector(); render(); return; }
@@ -1476,6 +1527,7 @@ document.getElementById('scrubber').oninput=e=>{ playing=false; setPlayUI(); tNo
 window.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT')return;
   if(building && (e.key==='Enter'||e.key==='Escape')){ e.preventDefault(); finishBuilding(); return; }
+  if(skateBackBuilding && (e.key==='Enter'||e.key==='Escape')){ e.preventDefault(); skateBackBuilding=null; skateBackCursor=null; selOne(null); updateInspector(); render(); return; }
   if(skateBuilding && (e.key==='Enter'||e.key==='Escape')){ e.preventDefault(); skateBuilding=null; skateCursor=null; selOne(null); updateInspector(); render(); return; }
   if(passBuilding && (e.key==='Enter'||e.key==='Escape')){ e.preventDefault(); passBuilding=null; passCursor=null; selOne(null); updateInspector(); render(); return; }
   if(shotBuilding && (e.key==='Enter'||e.key==='Escape')){ e.preventDefault(); shotBuilding=null; shotCursor=null; selOne(null); updateInspector(); render(); return; }
