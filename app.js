@@ -771,9 +771,9 @@ function render(){
   pieces.forEach(p=>drawPiece(p, map[p.id]));
   // rotation handle for selected net
   const rotPc = selSet.length===1 && selSet[0].kind==='piece' ? getPiece(selSet[0].id) : null;
-  if(rotPc && rotPc.type==='net'){
+  if(rotPc && (rotPc.type==='net'||rotPc.type==='bumper')){
     const [sx,sy]=W2S(rotPc.x,rotPc.y);
-    const armLen=38, hx=sx+Math.sin(rotPc.rot||0)*(-armLen), hy=sy+Math.cos(rotPc.rot||0)*(-armLen);
+    const armLen=38, rad=(rotPc.rot||0)*Math.PI/180, hx=sx-Math.sin(rad)*armLen, hy=sy-Math.cos(rad)*armLen;
     ctx.save();
     ctx.strokeStyle='#5BC2D6'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
     ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(hx,hy); ctx.stroke(); ctx.setLineDash([]);
@@ -859,9 +859,9 @@ cv.addEventListener('pointerdown',e=>{
 
   // rotation handle hit-test
   const rotPcDown = selSet.length===1 && selSet[0].kind==='piece' ? getPiece(selSet[0].id) : null;
-  if(rotPcDown && rotPcDown.type==='net'){
+  if(rotPcDown && (rotPcDown.type==='net'||rotPcDown.type==='bumper')){
     const [sx,sy]=W2S(rotPcDown.x,rotPcDown.y);
-    const armLen=38, hx=sx+Math.sin(rotPcDown.rot||0)*(-armLen), hy=sy+Math.cos(rotPcDown.rot||0)*(-armLen);
+    const armLen=38, rad2=(rotPcDown.rot||0)*Math.PI/180, hx=sx-Math.sin(rad2)*armLen, hy=sy-Math.cos(rad2)*armLen;
     if(Math.hypot(e.offsetX-hx,e.offsetY-hy)<12){ pushUndo(); rotDrag={piece:rotPcDown}; return; }
   }
   if(pendingPick){ resolvePick(wx,wy); return; }
@@ -943,7 +943,7 @@ cv.addEventListener('pointerdown',e=>{
 cv.addEventListener('pointermove',e=>{
   const [wx,wy]=S2W(e.offsetX,e.offsetY);
   if(rotDrag){ const p=rotDrag.piece; const [sx,sy]=W2S(p.x,p.y);
-    p.rot=Math.atan2(sx-e.offsetX,sy-e.offsetY); render(); return; }
+    p.rot=Math.atan2(sx-e.offsetX,sy-e.offsetY)*180/Math.PI; render(); return; }
   if(passBuilding){ passCursor={x:wx,y:wy}; render(); return; }
   if(shotBuilding){ shotCursor={x:wx,y:wy}; render(); return; }
   if(panStart){ cam.tx=panStart.tx+(e.offsetX-panStart.x); cam.ty=panStart.ty+(e.offsetY-panStart.y); render(); return; }
