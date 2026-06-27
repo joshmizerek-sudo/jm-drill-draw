@@ -670,6 +670,39 @@ function drawMotionPath(p){
   // ghost piece at destination
   if(pc){ ctx.save(); ctx.globalAlpha=0.42; drawPieceGhost(pc,p.pts[p.pts.length-1]); ctx.restore(); }
 }
+function drawScallops(ctx, pts, col, camScale){
+  if(pts.length<2) return;
+  // arc-length LUT
+  const lens=[0];
+  for(let i=1;i<pts.length;i++) lens.push(lens[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));
+  const total=lens[lens.length-1];
+  function getAt(s){ s=Math.max(0,Math.min(s,total)); let i=0; while(i<lens.length-2&&lens[i+1]<=s)i++;
+    const f=lens[i+1]>lens[i]?(s-lens[i])/(lens[i+1]-lens[i]):0;
+    return [pts[i][0]+f*(pts[i+1][0]-pts[i][0]), pts[i][1]+f*(pts[i+1][1]-pts[i][1])]; }
+  function normAt(s){ const a=getAt(Math.max(0,s-1)), b=getAt(Math.min(total,s+1));
+    const dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy)||1; return [-dy/len,dx/len]; }
+
+  const amp=Math.max(7,4.8*camScale);   // height of each C (perpendicular)
+  const wl=amp*2.4;                     // width of each C (along path)
+
+  ctx.save(); ctx.strokeStyle=col; ctx.lineWidth=Math.max(2,0.55*camScale);
+  ctx.lineJoin='round'; ctx.lineCap='round';
+  ctx.beginPath();
+  const [sx,sy]=getAt(0); ctx.moveTo(sx,sy);
+  let s=0, side=1;
+  while(s<total){
+    const sEnd=Math.min(s+wl,total);
+    const sMid=(s+sEnd)/2;
+    const [ex,ey]=getAt(sEnd);
+    const [mx,my]=getAt(sMid);
+    const [nx,ny]=normAt(sMid);
+    // control point at 2*amp so bezier peak = amp (quadratic midpoint formula)
+    ctx.quadraticCurveTo(mx+nx*amp*2*side, my+ny*amp*2*side, ex, ey);
+    s=sEnd; side=-side;
+    if(s>=total) break;
+  }
+  ctx.stroke(); ctx.restore();
+}
 function drawAnnotation(p){
   if(p.pts.length<2) return;
   const scr=p.pts.map(pt=>W2S(pt.x,pt.y));
@@ -683,20 +716,9 @@ function drawAnnotation(p){
   }
   else if(p.type==='skateback'){
     const anc=p.anchors&&p.anchors.length>=2?p.anchors:p.pts;
-    const smooth=anc.length>=2?catmull(anc,24).map(q=>W2S(q.x,q.y)):scr;
-    // build wavy path: offset perpendicular with sine wave
-    const amp=Math.max(5,3.5*cam.s), freq=0.18;
-    const wavy=smooth.map((pt,i)=>{
-      if(i===0||i===smooth.length-1) return pt;
-      const prev=smooth[i-1], next=smooth[i+1];
-      const dx=next[0]-prev[0], dy=next[1]-prev[1];
-      const len=Math.hypot(dx,dy)||1;
-      const nx=-dy/len, ny=dx/len; // perpendicular
-      const t=i*freq;
-      const off=Math.sin(t*Math.PI*2)*amp;
-      return [pt[0]+nx*off, pt[1]+ny*off];
-    });
-    strokePoly(wavy); arrowHead(smooth,col);
+    const smooth=anc.length>=2?catmull(anc,48).map(q=>W2S(q.x,q.y)):scr;
+    drawScallops(ctx, smooth, col, cam.s);
+    arrowHead(smooth, col);
   }
   else if(p.type==='pass'){ ctx.setLineDash([7,6]); strokePoly(scr); ctx.setLineDash([]); arrowHead(scr,col,true); }
   else if(p.type==='shot'){ shotDouble(scr,col); }
@@ -951,19 +973,10 @@ function render(){
   // live preview of backwards skate being built
   if(skateBackBuilding && skateBackCursor){
     const anc=[...skateBackBuilding.path.anchors, skateBackCursor];
-    const smooth=anc.length>=2?catmull(anc,24):anc;
-    const scr2=smooth.map(q=>W2S(q.x,q.y));
-    const amp=Math.max(5,3.5*cam.s), freq=0.18;
-    const wavy=scr2.map((pt,i)=>{
-      if(i===0||i===scr2.length-1) return pt;
-      const prev=scr2[i-1], next=scr2[i+1];
-      const dx=next[0]-prev[0], dy=next[1]-prev[1]; const len=Math.hypot(dx,dy)||1;
-      const nx=-dy/len, ny=dx/len;
-      return [pt[0]+nx*Math.sin(i*freq*Math.PI*2)*amp, pt[1]+ny*Math.sin(i*freq*Math.PI*2)*amp];
-    });
-    ctx.save(); ctx.strokeStyle=activeColor||'#0C2233'; ctx.globalAlpha=0.5;
-    ctx.lineWidth=Math.max(2,0.55*cam.s); ctx.lineJoin='round'; ctx.lineCap='round';
-    strokePoly(wavy); ctx.restore();
+    const smooth=anc.length>=2?catmull(anc,48).map(q=>W2S(q.x,q.y)):anc.map(q=>W2S(q.x,q.y));
+    ctx.save(); ctx.globalAlpha=0.5;
+    drawScallops(ctx, smooth, activeColor||'#0C2233', cam.s);
+    ctx.restore();
   }
   // live preview of pass being built
   if(passBuilding && passCursor){
