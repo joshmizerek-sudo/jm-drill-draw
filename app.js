@@ -1357,6 +1357,33 @@ refSel.onchange=()=>{ const v=refSel.value; refSel.value='';
 refFile.onchange=e=>{ const f=e.target.files[0]; if(!f)return;
   const r=new FileReader(); r.onload=()=>addRefImage(r.result); r.readAsDataURL(f); e.target.value=''; };
 
+// canvas recording
+let mediaRec=null, recChunks=[];
+function startRec(){
+  if(mediaRec) return;
+  const stream=cv.captureStream(30);
+  const mime=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
+  mediaRec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:8000000});
+  recChunks=[];
+  mediaRec.ondataavailable=e=>{ if(e.data.size>0) recChunks.push(e.data); };
+  mediaRec.onstop=()=>{
+    const blob=new Blob(recChunks,{type:'video/webm'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='drill-'+new Date().toISOString().slice(0,10)+'.webm'; a.click();
+    toast('Video saved to your downloads');
+    recChunks=[]; mediaRec=null; updateRecBtn();
+  };
+  mediaRec.start(100);
+  updateRecBtn(); toast('Recording started — press REC again to stop');
+}
+function stopRec(){ if(mediaRec){ mediaRec.stop(); } }
+function updateRecBtn(){ const b=document.getElementById('recBtn');
+  if(!b) return;
+  if(mediaRec){ b.textContent='⏹ Stop'; b.style.color='#E8313A'; b.style.borderColor='#E8313A'; }
+  else { b.textContent='⏺ REC'; b.style.color=''; b.style.borderColor=''; }
+}
+document.getElementById('recBtn').onclick=()=>{ mediaRec? stopRec() : startRec(); };
+
 // image export
 function exportImage(fmt){
   // render at 2x resolution for sharpness
