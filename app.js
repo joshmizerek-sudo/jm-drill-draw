@@ -240,7 +240,7 @@ function drawThumb(c,type,opts){
 function viewCenterWorld(){
   const [x,y]=S2W(cv.clientWidth/2, cv.clientHeight/2); return {x,y};
 }
-function armPlace(type,opts){ pendingType=type; pendingOpts=opts||null; pendingStamp=false; selOne(null); updateInspector(); cv.style.cursor='crosshair'; updateHint(); }
+function armPlace(type,opts){ pendingType=type; pendingOpts=opts||null; pendingStamp=true; selOne(null); updateInspector(); cv.style.cursor='crosshair'; updateHint(); }
 function cloneOpts(src){ const o={...src}; delete o.id; delete o.x; delete o.y; delete o._wft; delete o._hft; delete o._lut; return o; }
 function clonePiece(p,dx,dy){ const np={...p,id:id(),x:p.x+dx,y:p.y+dy}; if(p.legs) np.legs=p.legs.map(l=>({...l})); return np; }
 function clonePath(pa,dx,dy){ return {...pa,id:id(),_lut:null,
@@ -938,6 +938,7 @@ cv.addEventListener('dblclick',e=>{
 });
 cv.addEventListener('contextmenu',e=>{
   e.preventDefault();
+  if(pendingType){ pendingType=null; pendingOpts=null; pendingStamp=false; cv.style.cursor=''; updateHint(); render(); return; }
   if(passBuilding){ passBuilding=null; passCursor=null; selOne(null); updateInspector(); render(); return; }
   if(shotBuilding){ shotBuilding=null; shotCursor=null; selOne(null); updateInspector(); render(); return; }
   if(building){ finishBuilding(); return; }
