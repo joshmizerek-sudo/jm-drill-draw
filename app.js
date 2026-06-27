@@ -718,7 +718,12 @@ function drawAnnotation(p){
     const anc=p.anchors&&p.anchors.length>=2?p.anchors:p.pts;
     const smooth=anc.length>=2?catmull(anc,48).map(q=>W2S(q.x,q.y)):scr;
     drawScallops(ctx, smooth, col, cam.s);
-    ctx.globalAlpha=1; arrowHead(smooth, col);
+    // place arrowhead beyond the last scallop
+    ctx.globalAlpha=1;
+    const _n=smooth.length, _a=smooth[_n-2]||smooth[0], _b=smooth[_n-1];
+    const _ang=Math.atan2(_b[1]-_a[1],_b[0]-_a[0]), _L=Math.max(8,2.4*cam.s);
+    const _tip=[_b[0]+_L*Math.cos(_ang), _b[1]+_L*Math.sin(_ang)];
+    arrowHead([_a, _tip], col);
   }
   else if(p.type==='pass'){ ctx.setLineDash([7,6]); strokePoly(scr); ctx.setLineDash([]); arrowHead(scr,col,true); }
   else if(p.type==='shot'){ shotDouble(scr,col); }
