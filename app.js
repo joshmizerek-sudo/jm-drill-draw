@@ -901,7 +901,7 @@ cv.addEventListener('pointerup',e=>{
   if(panStart){ panStart=null; return; }
   if(marquee){ finalizeMarquee(); marquee=null; render(); return; }
   if(drag){ drag=null; return; }
-  if(seg && building){ const p=building.path;
+  if(seg && building){ const [wx,wy]=S2W(e.offsetX,e.offsetY); const p=building.path;
     const moved = seg.raw.length>1 && polyLen(seg.raw)>2;
     if(moved){ p.anchors=p.anchors.concat(rdp(seg.raw,1.3).slice(1)); }
     else { const la=p.anchors[p.anchors.length-1]; if(Math.hypot(wx-la.x,wy-la.y)>2) p.anchors.push({x:wx,y:wy}); }
